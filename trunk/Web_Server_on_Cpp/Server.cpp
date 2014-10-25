@@ -7,7 +7,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
-#include <dirent.h>
 #include <string>
 #include <iostream>
 #include <fcntl.h>
@@ -22,23 +21,6 @@
 #include "Server.h"
 
 
-
-#define __DIR__ 4
-#define __LINK__ 10
-
-static const char* page_start =
-        "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\"\n\"http://www.w3.org/TR/html4/strict.dtd\">\n"
-        "<html>\n"
-        "\t<head>\n"
-        "\t<title>!DOCTYPE</title>\n"
-        "\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
-        "\t</head>\n"
-        "\t<body>\n"
-        "\t\t<pre>\n";
-
-static const char* page_end = "\t\t</pre>\n"
-        "\t</body>\n"
-        "</html>\n";
 
 static const char* bad_request_response = "HTTP/1.0 400 Bad Request\n"
         "Content-type: text/html\n"
@@ -67,7 +49,7 @@ static const char* bad_method_response_template =
 
 
 
-Server::Server(const in_addr addr, u_int16_t port):m_Connected(0), m_SrvLocalAddress(addr), m_Port(port){
+Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr), m_Port(port), m_Connected(0){
     if(port < 1024){
         throw ServerExeption();
     }
@@ -96,20 +78,20 @@ void Server::openConection(){
         if (child_pid == 0){
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
-            close(m_SrvSocket);
+            close(m_Socket);
 
             try{
-                handleConnection(m_Fd);
+                handleConnection();
             }
             catch(std::exception& e){
                 std::cerr << e.what();
             }
 
-            close(m_Fd);
+            close(m_FileDescriptor);
             exit(0);
         }
         else if (child_pid > 0){
-            close(m_Fd);
+            close(m_FileDescriptor);
             waitpid(child_pid, NULL, 0);
         }
         else{
@@ -124,14 +106,15 @@ void Server::closeConnection(){
     }
     else{
         m_Connected = 0;
+        close(m_FileDescriptor);
     }
 }
 
-void Server::handleConnection(int connection_fd){
+void Server::handleConnection(){
     char buffer[256];
     ssize_t bytes_read;
 
-    bytes_read = read(connection_fd, buffer, sizeof(buffer) - 1);
+    bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
     if (bytes_read > 0){
         char method[sizeof(buffer)];
         char url[sizeof(buffer)];
@@ -140,27 +123,20 @@ void Server::handleConnection(int connection_fd){
         buffer[bytes_read] = '\0';
 
         sscanf(buffer, "%s %s %s", method, url, protocol);
-        std::cerr << "***************************************\n";
-        std::cerr << "Buffer\n" << buffer << "\n";
-        std::cerr << "***************************************\n";
-        std::cerr << "Method\n" << method << "\n";
-        std::cerr << "***************************************\n";
-        std::cerr << "URL\n" << url << "\n";
-        std::cerr << "***************************************\n";
-        std::cerr << "Protocol\n" << protocol << "\n";
-        std::cerr << "***************************************\n";
+        m_Path = url;
+
         while (strstr(buffer, "\r\n\r\n") == NULL){
-            bytes_read = read(connection_fd, buffer, sizeof(buffer));
+            bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer));
         }
 
         if (bytes_read == -1) {
-            close(connection_fd);
+            close(m_FileDescriptor);
             return;
         }
 
         if (strcmp(protocol, "HTTP/1.0") && strcmp(protocol, "HTTP/1.1")) {
 
-            write(connection_fd, bad_request_response,
+            write(m_FileDescriptor, bad_request_response,
                   sizeof(bad_request_response));
 
         }
@@ -170,12 +146,12 @@ void Server::handleConnection(int connection_fd){
 
             snprintf(response, sizeof(response), bad_method_response_template,
                      method);
-            write(connection_fd, response, strlen(response));
+            write(m_FileDescriptor, response, strlen(response));
 
         }
         else{
             try{
-                fs_browse(connection_fd, url);
+                fsBrowse();
             }
             catch(std::exception& e){
                 std::cerr << e.what();
@@ -187,44 +163,20 @@ void Server::handleConnection(int connection_fd){
     }
 }
 
-void fs_browse(int fd, const char* page){
+void Server::fsBrowse(){
     pid_t child_pid;
-    int rval;
-    size_t len = strlen(page);
-
-    std::auto_ptr<char> local_page(new char [len + 1]);
-    strcpy(local_page.get(), page);
-    local_page.get()[len] = '\0';
-
     child_pid = fork();
     if (child_pid == 0) {
-        rval = dup2(fd, STDOUT_FILENO);
-        if (rval == -1){
-            throw(ServerExeption(rval, "dup2"));
-        }
-
-        rval = dup2(fd, STDERR_FILENO);
-        if (rval == -1){
-            throw(ServerExeption(rval, "dup2"));
-        }
-
         try{
             struct stat s;
-            if(stat(local_page.get(), &s) == 0){
-                if(S_ISDIR(s.st_mode)){//view fs
-                    write(fd, page_start, strlen(page_start));
-                    view_folder(local_page.get());
-                    view_files(local_page.get());
-                    write(fd, page_end, strlen(page_end));
+            if(stat(m_Path.c_str(), &s) == 0){
+                if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
+                    m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
+                    writeToDescriptor();
                 }
                 else if(S_ISREG(s.st_mode)){//download file
-                    int fd_file = open(local_page.get(), O_RDONLY);
-                    struct stat st;
-                    stat(local_page.get(), &st);
-                    char* buf = new char[st.st_size];
-                    read(fd_file, buf, st.st_size);
-                    write(fd, buf, st.st_size);
-                    delete[] buf;
+                    m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
+                    writeToDescriptor();
                 }
             }
         }
@@ -237,24 +189,30 @@ void fs_browse(int fd, const char* page){
     }
 }
 
+void Server::writeToDescriptor(){
+    const char* const& toWrite = m_RequestOperations->handleRequest(m_Path).get()->c_str();
+    const size_t& len = m_RequestOperations->handleRequest(m_Path).get()->length() + 1;
+    write(m_FileDescriptor, toWrite, len);
+}
+
 void Server::bindToSocket(){
-    m_SrvSocket = socket(PF_INET, SOCK_STREAM, 0);
-    if(m_SrvSocket == -1){
-        throw(ServerExeption(m_SrvSocket, "socket"));
+    m_Socket = socket(PF_INET, SOCK_STREAM, 0);
+    if(m_Socket == -1){
+        throw(ServerExeption(m_Socket, "socket"));
     }
 
-    memset(&m_SrvSocketAddress, 0, sizeof(m_SrvSocketAddress));
-    m_SrvSocketAddress.sin_family = AF_INET;
-    m_SrvSocketAddress.sin_port = m_Port;
-    m_SrvSocketAddress.sin_addr = m_SrvLocalAddress;
+    memset(&m_SocketAddress, 0, sizeof(m_SocketAddress));
+    m_SocketAddress.sin_family = AF_INET;
+    m_SocketAddress.sin_port = m_Port;
+    m_SocketAddress.sin_addr = m_LocalAddress;
 
     int rval = 0;
-    rval = bind(m_SrvSocket, reinterpret_cast<struct sockaddr*>(&m_SrvSocketAddress), sizeof(m_SrvSocketAddress));
+    rval = bind(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SocketAddress), sizeof(m_SocketAddress));
     if(rval){
         throw(ServerExeption(rval, "bind"));
     }
 
-    rval = listen(m_SrvSocket, 10);
+    rval = listen(m_Socket, 10);
     if (rval)
         throw(ServerExeption(rval, "listen"));
 }
@@ -264,8 +222,8 @@ void Server::getDescriptor(){
     socklen_t AddrLen;
 
     AddrLen = sizeof(RemoteAddr);
-    m_Fd = accept(m_SrvSocket, (struct sockaddr*) &RemoteAddr, &AddrLen);
-    if (m_Fd == -1) {
+    m_FileDescriptor = accept(m_Socket, (struct sockaddr*) &RemoteAddr, &AddrLen);
+    if (m_FileDescriptor == -1) {
         if (errno != EINTR){
             throw(ServerExeption(errno, "accept"));
         }

@@ -21,21 +21,22 @@ public:
 private:
     void bindToSocket();
     void getDescriptor();
-    void handleConnection(int fd);
+    void handleConnection();
+    void fsBrowse();
+    void writeToDescriptor();
 
 private:
 
     Thread                              m_Threads;
-    std::auto_ptr<iRequestHandler>      m_SrvRequestOperations;
-    struct sockaddr_in                  m_SrvSocketAddress;
-    struct in_addr                      m_SrvLocalAddress;
-    int                                 m_SrvSocket;
-    bool                                m_Connected;
+    std::auto_ptr<iRequestHandler>      m_RequestOperations;
+    struct sockaddr_in                  m_SocketAddress;
+    struct in_addr                      m_LocalAddress;
+    int                                 m_Socket;
     u_int16_t                           m_Port;
-    int                                 m_Fd;
+    bool                                m_Connected;
+    int                                 m_FileDescriptor;
+    std::string                         m_Path;
 };
 
-
-void fs_browse(int fd, const char* page);
 
 #endif // SERVER_H

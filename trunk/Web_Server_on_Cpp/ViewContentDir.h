@@ -9,12 +9,11 @@ class ViewContentDir : public iRequestHandler
 {
 public:
 
-    virtual autoPtrByteArr handleRequest(const std::string& input_str) const;
-
-private:
-
-    void view_files(const char *folderPath);
-    void view_folder(const char *filePath);
+    virtual autoPtrStr handleRequest(const std::string& input_str) const;
 };
+
+
+const autoPtrStr viewFolders(const std::string& folder);
+const autoPtrStr downloadFile(const std::string& folder);
 
 #endif // VIEW_CONTENT_DIR_H

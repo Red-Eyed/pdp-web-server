@@ -1,23 +1,45 @@
 #include "ViewContentDir.h"
+#include <dirent.h>
+#include <string.h>
+#include <stdio.h>
 
-autoPtrByteArr ViewContentDir::handleRequest(const std::string& input_str) const{
-    //    struct stat sb;
-    //    if( access( input_str.c_str(), F_OK ) == -1 ) {
-    //        throw ServerExeption();
-    //    }
-    //    stat(input_str.c_str(), &sb);
-    //    switch (sb.st_mode & S_IFMT) {
-    //        case S_IFREG:  throw ServerExeption();break;
-    //        case S_IFLNK:  throw ServerExeption();break;
-    //    }
+#define __DIR__ 4
+#define __LINK__ 10
+
+static const std::string pageStart =
+        "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\"\n\"http://www.w3.org/TR/html4/strict.dtd\">\n"
+        "<html>\n"
+        "\t<head>\n"
+        "\t<title>!DOCTYPE</title>\n"
+        "\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
+        "\t</head>\n"
+        "\t<body>\n"
+        "\t\t<pre>\n";
+
+static const std::string pageEnd = "\t\t</pre>\n"
+        "\t</body>\n"
+        "</html>\n\n";
+
+autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
+
+    autoPtrStr retStr(new std::string);
+
+    *retStr += pageStart;
+    *retStr += *viewFolders(input_str);
+    *retStr += *downloadFile(input_str);
+    *retStr += pageEnd;
+    return retStr;
+
 }
 
-void view_folder(const char *folder){
+const autoPtrStr viewFolders(const std::string& folder){
     DIR * dir;
     struct dirent* de;
-    size_t size_of_link_path = 256;
-    char link_path[size_of_link_path];
-    if ((dir = opendir(folder)) == NULL) {
+    autoPtrStr foldersList(new std::string);
+    size_t sizeOfLinkPath = 256;
+    char linkPath[sizeOfLinkPath];
+    memset(linkPath, 0, sizeOfLinkPath);
+    if ((dir = opendir(folder.c_str())) == NULL) {
         throw(ServerExeption(0, "opendir failed!"));
     }
     else {
@@ -26,28 +48,37 @@ void view_folder(const char *folder){
                 if (de->d_name[0] == '.' && de->d_name[1] == '\0') {
                     continue;
                 }
-                printf("<a href=\"%s/%s\">[Dir] %s</a> \n", folder, de->d_name,
-                       de->d_name);
+                *foldersList += "<a href=\"" +
+                        folder +
+                        std::string(de->d_name) +
+                        "/\">[Dir] " +
+                        de->d_name +
+                        "</a> \n";
             }
             if(de->d_type == __LINK__){
-                size_t size = strlen(folder) + strlen(de->d_name) + 1;
+                size_t size = folder.length() + strlen(de->d_name) + 1;
                 char abs_path[size];
-                sprintf(abs_path, "%s%s", folder, de->d_name);
-                abs_path[size] = 0;
-                int end_symbols = readlink(abs_path, link_path, size_of_link_path);
-                link_path[end_symbols] = '\0';
-                printf("<a href=\"%s\">[Link]%s</a> \n", link_path,
-                       de->d_name);
+                sprintf(abs_path, "%s%s", folder.c_str(), de->d_name);
+                abs_path[size] = '\0';
+                int end_symbols = readlink(abs_path, linkPath, sizeOfLinkPath);
+                linkPath[end_symbols] = '\0';
+                *foldersList += "<a href=\"" +
+                        std::string(abs_path) +
+                        "/\">[Link] " +
+                        std::string(de->d_name) +
+                        "</a> \n";
             }
         }
         closedir(dir);
     }
+    return foldersList;
 }
 
-void view_files(const char *folder){
-    DIR * dir;
-    struct dirent * de;
-    if ((dir = opendir(folder)) == NULL) {
+const autoPtrStr downloadFile(const std::string& folder){
+    DIR* dir;
+    struct dirent* de;
+    autoPtrStr filesList(new std::string);
+    if ((dir = opendir(folder.c_str())) == NULL) {
         throw(ServerExeption(0, "opendir failed!"));
     }
     else {
@@ -56,10 +87,15 @@ void view_files(const char *folder){
                 continue;
             }
             else {
-                printf("<a href=\"%s/%s\" >[File] %s</a> \n", folder, de->d_name,
-                       de->d_name);
+                *filesList += "<a href=\"" +
+                        folder +
+                        std::string(de->d_name) +
+                        "\" download >[File] " +
+                        std::string(de->d_name) +
+                        " </a> \n";
             }
         }
         closedir(dir);
     }
+    return filesList;
 }

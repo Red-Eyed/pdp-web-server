@@ -6,12 +6,12 @@
 #include "ServerExeption.h"
 
 
-typedef std::auto_ptr<std::vector<bool> > autoPtrByteArr;
+typedef std::auto_ptr<std::string> autoPtrStr;
 
 class iRequestHandler
 {
 public:
-    virtual autoPtrByteArr handleRequest(const std::string& input_str) const = 0;
+    virtual autoPtrStr handleRequest(const std::string& input_str) const = 0;
     virtual ~iRequestHandler() throw() {}
 
 private:
