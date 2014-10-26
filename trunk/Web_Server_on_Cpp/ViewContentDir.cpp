@@ -16,10 +16,13 @@ static const std::string pageStart =
         "\t<body>\n"
         "\t\t<pre>\n";
 
-static const std::string pageEnd = "\t\t</pre>\n"
+static const std::string pageEnd =
+        "\t\t</pre>\n"
         "\t</body>\n"
         "</html>\n\n";
 
+const autoPtrStr viewFolders(const std::string& path, const std::string& tabs);
+const autoPtrStr viewFiles(const std::string& path, const std::string& tabs);
 
 autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
 
@@ -27,8 +30,8 @@ autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
 
     *retStr += pageStart;
     try{
-        *retStr += *viewFolders(input_str);
-        *retStr += *viewFiles(input_str);
+        *retStr += *viewFolders(input_str, "");
+        *retStr += *viewFiles(input_str, "");
     }
     catch(std::exception& e){
         std::cerr << e.what();
@@ -39,14 +42,14 @@ autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
 
 }
 
-const autoPtrStr viewFolders(const std::string& folder){
+const autoPtrStr viewFolders(const std::string& path, const std::string& tabs){
     DIR * dir;
     struct dirent* de;
     autoPtrStr foldersList(new std::string);
     size_t sizeOfLinkPath = 256;
     char linkPath[sizeOfLinkPath];
     memset(linkPath, 0, sizeOfLinkPath);
-    if ((dir = opendir(folder.c_str())) == NULL) {
+    if ((dir = opendir(path.c_str())) == NULL) {
         throw(ServerExeption(0, "opendir failed!"));
     }
     else {
@@ -55,21 +58,21 @@ const autoPtrStr viewFolders(const std::string& folder){
                 if (de->d_name[0] == '.' && de->d_name[1] == '\0') {
                     continue;
                 }
-                *foldersList += "<a href=\"" +
-                        folder +
+                *foldersList += tabs +"<a href=\"" +
+                        path +
                         std::string(de->d_name) +
                         "/\">[Dir] " +
                         de->d_name +
                         "</a> \n";
             }
             if(de->d_type == __LINK__){
-                size_t size = folder.length() + strlen(de->d_name) + 1;
+                size_t size = path.length() + strlen(de->d_name) + 1;
                 char abs_path[size];
-                sprintf(abs_path, "%s%s", folder.c_str(), de->d_name);
+                sprintf(abs_path, "%s%s", path.c_str(), de->d_name);
                 abs_path[size] = '\0';
                 int end_symbols = readlink(abs_path, linkPath, sizeOfLinkPath);
                 linkPath[end_symbols] = '\0';
-                *foldersList += "<a href=\"" +
+                *foldersList += tabs + "<a href=\"" +
                         std::string(abs_path) +
                         "/\">[Link] " +
                         std::string(de->d_name) +
@@ -81,11 +84,11 @@ const autoPtrStr viewFolders(const std::string& folder){
     return foldersList;
 }
 
-const autoPtrStr viewFiles(const std::string& folder){
+const autoPtrStr viewFiles(const std::string& path, const std::string& tabs){
     DIR* dir;
     struct dirent* de;
     autoPtrStr filesList(new std::string);
-    if ((dir = opendir(folder.c_str())) == NULL) {
+    if ((dir = opendir(path.c_str())) == NULL) {
         throw(ServerExeption(0, "opendir failed!"));
     }
     else {
@@ -94,8 +97,8 @@ const autoPtrStr viewFiles(const std::string& folder){
                 continue;
             }
             else {
-                *filesList += "<a href=\"" +
-                        folder +
+                *filesList += tabs + "<a href=\"" +
+                        path +
                         std::string(de->d_name) +
                         "\" >[File] " +
                         std::string(de->d_name) +
