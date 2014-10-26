@@ -5,8 +5,13 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <signal.h>
+#include <string.h>
+
 #include "Server.h"
 
+
+void cleanUpChildProcess(int sig);
 
 /* Description of long options for getopt_long.  */
 
@@ -78,3 +83,5 @@ int main (int argc, char* const argv[]){
     s.closeConnection();
     return 0;
 }
+
+

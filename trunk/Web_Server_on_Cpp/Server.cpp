@@ -1,13 +1,10 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <signal.h>
-#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string>
 #include <iostream>
 #include <fcntl.h>
 #include <sys/sendfile.h>
@@ -17,10 +14,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <cstring>
 
 #include "Server.h"
 
+static sig_atomic_t sigFlag = 0;
 
+void cleanUpChildProcess(int state);
 
 static const char* badRequestResponse = "HTTP/1.0 400 Bad Request\n"
         "Content-type: text/html\n"
@@ -44,7 +44,9 @@ static const char* badMethodResponseTemplate =
         "</html>\n";
 
 
-Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr), m_Port(port), m_Connected(0){
+Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr),
+    m_Port(port),
+    m_Connected(0){
     if(port < 1024){
         throw ServerExeption();
     }
@@ -66,8 +68,16 @@ void Server::openConection(){
     else{
         m_Connected = 1;
     }
+
+    struct sigaction sigchld_action;
+    memset(&sigchld_action, 0, sizeof(sigchld_action));
+    sigchld_action.sa_handler = &cleanUpChildProcess;
+    sigaction(SIGTERM, &sigchld_action, NULL);
+
     bindToSocket();
     while (1){
+        if(sigFlag)
+            break;
         getDescriptor();
         pid_t child_pid = fork();
         if (child_pid == 0){
@@ -100,6 +110,7 @@ void Server::closeConnection(){
         throw ServerExeption(0, "closeConnection error");
     }
     else{
+        std::cerr << "CloseConnection\n";
         m_Connected = 0;
         close(m_FileDescriptor);
         close(m_Socket);
@@ -246,4 +257,9 @@ void Server::getDescriptor(){
     }
 }
 
-
+void cleanUpChildProcess(int state){
+   int status;
+   wait(&status);
+   sigFlag = 1;
+   std::cerr << "cleanUpChildProcess";
+}
