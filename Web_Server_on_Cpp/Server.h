@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <netdb.h>
+#include <sys/wait.h>
 
 #include "ServerExeption.h"
 #include "DownloadFile.h"
@@ -19,6 +20,7 @@ public:
     void closeConnection();
 
 private:
+
     void bindToSocket();
     void getDescriptor();
     void handleConnection();
