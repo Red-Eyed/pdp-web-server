@@ -24,6 +24,7 @@ private:
     void handleConnection();
     void fsBrowse(const std::string& path);
     void writeToDescriptor(const std::string& path);
+    void writeDirTreeToDescriptor(const std::string& path);
 
 private:
 

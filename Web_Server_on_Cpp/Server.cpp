@@ -165,7 +165,7 @@ void Server::fsBrowse(const std::string& path){
         if(stat(path.c_str(), &s) == 0){
             if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
                 m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
-                writeToDescriptor(path);
+                writeDirTreeToDescriptor(path);
             }
             else if(S_ISREG(s.st_mode)){//download file
                 m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
@@ -189,6 +189,26 @@ void Server::writeToDescriptor(const std::string& path){
         std::cerr << e.what();
         return;
     }
+}
+
+void Server::writeDirTreeToDescriptor(const std::string& path){
+
+    struct stat st;
+    fstat(m_FileDescriptor, &st);
+    char buffer[st.st_size];
+    read(m_FileDescriptor, buffer, st.st_size);
+    std::string htmlPage(buffer, st.st_size);
+    autoPtrStr getHTMLPage = m_RequestOperations->handleRequest(path);
+    if(htmlPage.empty()){
+        if(htmlPage.find(path) != std::string::npos){
+            for(int i = 0; i < getHTMLPage->length(); ++i){
+                if(getHTMLPage->begin()[i] == '\n'){
+                    getHTMLPage->insert(getHTMLPage->begin() + i + 1, '\t');
+                }
+            }
+        }
+    }
+    write(m_FileDescriptor, getHTMLPage->c_str(), getHTMLPage->length());
 }
 
 void Server::bindToSocket(){
