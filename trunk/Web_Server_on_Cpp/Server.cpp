@@ -44,11 +44,6 @@ static const char* bad_method_response_template =
         "</html>\n";
 
 
-
-
-
-
-
 Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr), m_Port(port), m_Connected(0){
     if(port < 1024){
         throw ServerExeption();
@@ -63,10 +58,10 @@ Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr), m_Port(
     }
 }
 
-
 void Server::openConection(){
     if(m_Connected){
         throw ServerExeption();
+        return;
     }
     else{
         m_Connected = 1;
@@ -91,8 +86,8 @@ void Server::openConection(){
             exit(0);
         }
         else if (child_pid > 0){
-            close(m_FileDescriptor);
             waitpid(child_pid, NULL, 0);
+            close(m_FileDescriptor);
         }
         else{
             throw(ServerExeption(child_pid, "fork"));
@@ -102,11 +97,12 @@ void Server::openConection(){
 
 void Server::closeConnection(){
     if(!m_Connected){
-        throw ServerExeption();
+        throw ServerExeption(0, "closeConnection error");
     }
     else{
         m_Connected = 0;
         close(m_FileDescriptor);
+        close(m_Socket);
     }
 }
 
@@ -114,16 +110,16 @@ void Server::handleConnection(){
     char buffer[256];
     ssize_t bytes_read;
 
+    //get data from client
     bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
     if (bytes_read > 0){
         char method[sizeof(buffer)];
-        char url[sizeof(buffer)];
+        char path[sizeof(buffer)];
         char protocol[sizeof(buffer)];
 
         buffer[bytes_read] = '\0';
 
-        sscanf(buffer, "%s %s %s", method, url, protocol);
-        m_Path = url;
+        sscanf(buffer, "%s %s %s", method, path, protocol);
 
         while (strstr(buffer, "\r\n\r\n") == NULL){
             bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer));
@@ -151,7 +147,7 @@ void Server::handleConnection(){
         }
         else{
             try{
-                fsBrowse();
+                fsBrowse(std::string(path));
             }
             catch(std::exception& e){
                 std::cerr << e.what();
@@ -163,36 +159,36 @@ void Server::handleConnection(){
     }
 }
 
-void Server::fsBrowse(){
-    pid_t child_pid;
-    child_pid = fork();
-    if (child_pid == 0) {
-        try{
-            struct stat s;
-            if(stat(m_Path.c_str(), &s) == 0){
-                if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
-                    m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
-                    writeToDescriptor();
-                }
-                else if(S_ISREG(s.st_mode)){//download file
-                    m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
-                    writeToDescriptor();
-                }
+void Server::fsBrowse(const std::string& path){
+    try{
+        struct stat s;
+        if(stat(path.c_str(), &s) == 0){
+            if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
+                m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
+                writeToDescriptor(path);
+            }
+            else if(S_ISREG(s.st_mode)){//download file
+                m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
+                writeToDescriptor(path);
             }
         }
-        catch(std::exception& e){
-            std::cerr << e.what();
-        }
-
-    } else if (child_pid > 0) {
-        waitpid(child_pid, NULL, 0);
     }
+    catch(std::exception& e){
+        std::cerr << e.what();
+    }
+
 }
 
-void Server::writeToDescriptor(){
-    const char* const& toWrite = m_RequestOperations->handleRequest(m_Path).get()->c_str();
-    const size_t& len = m_RequestOperations->handleRequest(m_Path).get()->length() + 1;
-    write(m_FileDescriptor, toWrite, len);
+void Server::writeToDescriptor(const std::string& path){
+    try{
+        autoPtrStr toWrite = m_RequestOperations->handleRequest(path);
+        const size_t& size = toWrite->size();
+        write(m_FileDescriptor, toWrite->c_str(), size);
+    }
+    catch(std::exception& e){
+        std::cerr << e.what();
+        return;
+    }
 }
 
 void Server::bindToSocket(){

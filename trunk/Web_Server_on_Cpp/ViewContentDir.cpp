@@ -20,13 +20,20 @@ static const std::string pageEnd = "\t\t</pre>\n"
         "\t</body>\n"
         "</html>\n\n";
 
+
 autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
 
     autoPtrStr retStr(new std::string);
 
     *retStr += pageStart;
-    *retStr += *viewFolders(input_str);
-    *retStr += *downloadFile(input_str);
+    try{
+        *retStr += *viewFolders(input_str);
+        *retStr += *viewFiles(input_str);
+    }
+    catch(std::exception& e){
+        std::cerr << e.what();
+    }
+
     *retStr += pageEnd;
     return retStr;
 
@@ -74,7 +81,7 @@ const autoPtrStr viewFolders(const std::string& folder){
     return foldersList;
 }
 
-const autoPtrStr downloadFile(const std::string& folder){
+const autoPtrStr viewFiles(const std::string& folder){
     DIR* dir;
     struct dirent* de;
     autoPtrStr filesList(new std::string);
@@ -90,7 +97,7 @@ const autoPtrStr downloadFile(const std::string& folder){
                 *filesList += "<a href=\"" +
                         folder +
                         std::string(de->d_name) +
-                        "\" download >[File] " +
+                        "\" >[File] " +
                         std::string(de->d_name) +
                         " </a> \n";
             }

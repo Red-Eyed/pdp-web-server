@@ -14,6 +14,6 @@ public:
 
 
 const autoPtrStr viewFolders(const std::string& folder);
-const autoPtrStr downloadFile(const std::string& folder);
+const autoPtrStr viewFiles(const std::string& folder);
 
 #endif // VIEW_CONTENT_DIR_H

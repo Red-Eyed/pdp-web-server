@@ -72,7 +72,8 @@ int main (int argc, char* const argv[]){
     }
     catch(std::exception& e){
         std::cerr << e.what();
+        s.closeConnection();
     }
-
+    s.closeConnection();
     return 0;
 }
