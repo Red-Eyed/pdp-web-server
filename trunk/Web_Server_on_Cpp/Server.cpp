@@ -22,7 +22,7 @@
 
 
 
-static const char* bad_request_response = "HTTP/1.0 400 Bad Request\n"
+static const char* badRequestResponse = "HTTP/1.0 400 Bad Request\n"
         "Content-type: text/html\n"
         "\n"
         "<html>\n"
@@ -32,7 +32,7 @@ static const char* bad_request_response = "HTTP/1.0 400 Bad Request\n"
         " </body>\n"
         "</html>\n";
 
-static const char* bad_method_response_template =
+static const char* badMethodResponseTemplate =
         "HTTP/1.0 501 Method Not Implemented\n"
         "Content-type: text/html\n"
         "\n"
@@ -108,39 +108,39 @@ void Server::closeConnection(){
 
 void Server::handleConnection(){
     char buffer[256];
-    ssize_t bytes_read;
+    ssize_t bytesRead;
 
     //get data from client
-    bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
-    if (bytes_read > 0){
+    bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
+    if (bytesRead > 0){
         char method[sizeof(buffer)];
         char path[sizeof(buffer)];
         char protocol[sizeof(buffer)];
 
-        buffer[bytes_read] = '\0';
+        buffer[bytesRead] = '\0';
 
         sscanf(buffer, "%s %s %s", method, path, protocol);
 
         while (strstr(buffer, "\r\n\r\n") == NULL){
-            bytes_read = read(m_FileDescriptor, buffer, sizeof(buffer));
+            bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer));
         }
 
-        if (bytes_read == -1) {
+        if (bytesRead == -1) {
             close(m_FileDescriptor);
             return;
         }
 
         if (strcmp(protocol, "HTTP/1.0") && strcmp(protocol, "HTTP/1.1")) {
 
-            write(m_FileDescriptor, bad_request_response,
-                  sizeof(bad_request_response));
+            write(m_FileDescriptor, badRequestResponse,
+                  sizeof(badRequestResponse));
 
         }
         else if (strcmp(method, "GET")) {
 
             char response[1024];
 
-            snprintf(response, sizeof(response), bad_method_response_template,
+            snprintf(response, sizeof(response), badMethodResponseTemplate,
                      method);
             write(m_FileDescriptor, response, strlen(response));
 
@@ -155,7 +155,7 @@ void Server::handleConnection(){
         }
     }
     else{
-        throw(ServerExeption(bytes_read, "read"));
+        throw(ServerExeption(bytesRead, "read"));
     }
 }
 
