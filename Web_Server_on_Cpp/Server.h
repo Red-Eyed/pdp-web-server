@@ -22,8 +22,8 @@ private:
     void bindToSocket();
     void getDescriptor();
     void handleConnection();
-    void fsBrowse();
-    void writeToDescriptor();
+    void fsBrowse(const std::string& path);
+    void writeToDescriptor(const std::string& path);
 
 private:
 
@@ -35,7 +35,6 @@ private:
     u_int16_t                           m_Port;
     bool                                m_Connected;
     int                                 m_FileDescriptor;
-    std::string                         m_Path;
 };
 
 
