@@ -7,43 +7,44 @@
 #include <stdio.h>
 #include "Server.h"
 
+
 /* Description of long options for getopt_long.  */
 
-static const struct option long_options[] = {
+static const struct option longOptions[] = {
     { "address",          1, NULL, 'a' },
     { "port",             1, NULL, 'p' },
 };
 
 /* Description of short options for getopt_long.  */
 
-static const char* const short_options = "a:p:";
+static const char* const shortOptions = "a:p:";
 
 int main (int argc, char* const argv[]){
-    struct in_addr local_address;
+    struct in_addr localAddress;
     uint16_t port;
-    int next_option;
+    int nextOption;
 
-    local_address.s_addr = INADDR_ANY;
+    localAddress.s_addr = INADDR_ANY;
     port = 0;
 
     /* Parse options.  */
     do {
-        next_option =
-                getopt_long(argc, argv, short_options, long_options, NULL);
-        switch (next_option) {
+        nextOption =
+                getopt_long(argc, argv, shortOptions, longOptions, NULL);
+        switch (nextOption) {
             case 'a':
             {
-                struct hostent* local_host_name;
+                struct hostent* localHostName;
 
                 /* Look up the host name the user specified.  */
-                local_host_name = gethostbyname (optarg);
-                if (local_host_name == NULL || local_host_name->h_length == 0)
+                localHostName = gethostbyname (optarg);
+                if (localHostName == NULL || localHostName->h_length == 0)
                     /* Could not resolve the name.  */
                     std::cout << "Invalid host name\n";
                 else
                     /* Host name is OK, so use it.  */
-                    local_address.s_addr =
-                            *((int*) (local_host_name->h_addr_list[0]));
+                    localAddress.s_addr =
+                            *((int*) (localHostName->h_addr_list[0]));
             }
                 break;
 
@@ -64,9 +65,9 @@ int main (int argc, char* const argv[]){
             default:
                 abort ();
         }
-    } while (next_option != -1);
+    } while (nextOption != -1);
 
-    Server s(local_address, port);
+    Server s(localAddress, port);
     try{
         s.openConection();
     }

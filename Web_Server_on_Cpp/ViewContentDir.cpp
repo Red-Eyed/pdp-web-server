@@ -24,14 +24,14 @@ static const std::string pageEnd =
 const autoPtrStr viewFolders(const std::string& path, const std::string& tabs);
 const autoPtrStr viewFiles(const std::string& path, const std::string& tabs);
 
-autoPtrStr ViewContentDir::handleRequest(const std::string& input_str) const{
+autoPtrStr ViewContentDir::handleRequest(const std::string& inputStr) const{
 
     autoPtrStr retStr(new std::string);
 
     *retStr += pageStart;
     try{
-        *retStr += *viewFolders(input_str, "");
-        *retStr += *viewFiles(input_str, "");
+        *retStr += *viewFolders(inputStr, "");
+        *retStr += *viewFiles(inputStr, "");
     }
     catch(std::exception& e){
         std::cerr << e.what();
@@ -67,13 +67,13 @@ const autoPtrStr viewFolders(const std::string& path, const std::string& tabs){
             }
             if(de->d_type == __LINK__){
                 size_t size = path.length() + strlen(de->d_name) + 1;
-                char abs_path[size];
-                sprintf(abs_path, "%s%s", path.c_str(), de->d_name);
-                abs_path[size] = '\0';
-                int end_symbols = readlink(abs_path, linkPath, sizeOfLinkPath);
+                char absPath[size];
+                sprintf(absPath, "%s%s", path.c_str(), de->d_name);
+                absPath[size] = '\0';
+                int end_symbols = readlink(absPath, linkPath, sizeOfLinkPath);
                 linkPath[end_symbols] = '\0';
                 *foldersList += tabs + "<a href=\"" +
-                        std::string(abs_path) +
+                        std::string(absPath) +
                         "/\">[Link] " +
                         std::string(de->d_name) +
                         "</a> \n";
