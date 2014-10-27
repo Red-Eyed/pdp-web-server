@@ -2,6 +2,7 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdio.h>
+#include <fcntl.h>
 
 #define __DIR__ 4
 #define __LINK__ 10
@@ -26,19 +27,24 @@ const autoPtrStr viewFiles(const std::string& path, const std::string& tabs);
 
 autoPtrStr ViewContentDir::handleRequest(const std::string& inputStr) const{
 
-    autoPtrStr retStr(new std::string);
+    if(opendir(inputStr.c_str()) > 0){
+        autoPtrStr retStr(new std::string);
 
-    *retStr += pageStart;
-    try{
-        *retStr += *viewFolders(inputStr, "");
-        *retStr += *viewFiles(inputStr, "");
-    }
-    catch(std::exception& e){
-        std::cerr << e.what();
-    }
+        *retStr += pageStart;
+        try{
+            *retStr += *viewFolders(inputStr, "");
+            *retStr += *viewFiles(inputStr, "");
+        }
+        catch(std::exception& e){
+            std::cerr << e.what();
+        }
 
-    *retStr += pageEnd;
-    return retStr;
+        *retStr += pageEnd;
+        return retStr;
+    }
+    else{
+        throw ServerExeption(-1, "Open dir error");
+    }
 
 }
 

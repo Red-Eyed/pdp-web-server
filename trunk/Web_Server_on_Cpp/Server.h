@@ -15,7 +15,8 @@ class Server
 {
 public:
 
-    Server(const struct in_addr addr, u_int16_t port, const std::string& defaultPage);
+    Server(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
+    ~Server();
     void openConection();
     void closeConnection();
 

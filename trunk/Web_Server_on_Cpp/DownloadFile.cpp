@@ -22,7 +22,7 @@ autoPtrStr DownloadFile::handleRequest(const std::string& input_str) const
     stat(input_str.c_str(), &st);
     std::auto_ptr<char> buf(new char[st.st_size]);
     size_t size = read(fdFile, buf.get(), st.st_size);
-    if( size <= 0){
+    if( size < 0){
         throw ServerExeption(-1, "download error");
     }
 
