@@ -15,7 +15,7 @@ class Server
 {
 public:
 
-    Server(const struct in_addr addr, u_int16_t port);
+    Server(const struct in_addr addr, u_int16_t port, const std::string& defaultPage);
     void openConection();
     void closeConnection();
 
@@ -24,7 +24,7 @@ private:
     void bindToSocket();
     void getDescriptor();
     void handleConnection();
-    void fsBrowse(const std::string& path);
+    void fsBrowse(std::string& path);
     void writeToDescriptor(const std::string& path);
     void writeDirTreeToDescriptor(const std::string& path);
 
@@ -33,11 +33,12 @@ private:
     Thread                              m_Threads;
     std::auto_ptr<iRequestHandler>      m_RequestOperations;
     struct sockaddr_in                  m_SocketAddress;
-    struct in_addr                      m_LocalAddress;
+    const struct in_addr                m_LocalAddress;
     int                                 m_Socket;
-    u_int16_t                           m_Port;
+    const u_int16_t                     m_Port;
     bool                                m_Connected;
     int                                 m_FileDescriptor;
+    const std::string                   m_DefaultPage;
 };
 
 

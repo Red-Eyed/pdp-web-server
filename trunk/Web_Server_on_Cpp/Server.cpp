@@ -44,9 +44,11 @@ static const char* badMethodResponseTemplate =
         "</html>\n";
 
 
-Server::Server(const in_addr addr, u_int16_t port):m_LocalAddress(addr),
+Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPage):m_LocalAddress(addr),
     m_Port(port),
-    m_Connected(0){
+    m_Connected(0),
+    m_DefaultPage(defaultPage)
+{
     if(port < 1024){
         throw ServerExeption();
     }
@@ -120,6 +122,7 @@ void Server::closeConnection(){
 void Server::handleConnection(){
     char buffer[256];
     ssize_t bytesRead;
+    memset(buffer, 0, 256);
 
     //get data from client
     bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
@@ -128,9 +131,13 @@ void Server::handleConnection(){
         char path[sizeof(buffer)];
         char protocol[sizeof(buffer)];
 
+        memset(method, 0, sizeof(buffer));
+        memset(path, 0, sizeof(buffer));
+        memset(protocol, 0, sizeof(buffer));
         buffer[bytesRead] = '\0';
 
         sscanf(buffer, "%s %s %s", method, path, protocol);
+
 
         while (strstr(buffer, "\r\n\r\n") == NULL){
             bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer));
@@ -158,7 +165,8 @@ void Server::handleConnection(){
         }
         else{
             try{
-                fsBrowse(std::string(path));
+                std::string str(path);
+                fsBrowse(str);
             }
             catch(std::exception& e){
                 std::cerr << e.what();
@@ -170,7 +178,10 @@ void Server::handleConnection(){
     }
 }
 
-void Server::fsBrowse(const std::string& path){
+void Server::fsBrowse(std::string& path){
+    if(path == "/start"){
+        path = m_DefaultPage;
+    }
     try{
         struct stat s;
         if(stat(path.c_str(), &s) == 0){
