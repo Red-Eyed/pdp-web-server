@@ -49,8 +49,8 @@ Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPag
     m_Connected(0),
     m_DefaultPage(defaultPage)
 {
-    if(port < 1024){
-        throw ServerExeption();
+    if(port <= 1024){
+        throw ServerExeption(0, "Bad port");
     }
 
 }

@@ -131,17 +131,6 @@ TEST(ViewContentDirHandleRequest, EmptyString){
     EXPECT_THROW(PtrViewContentDir->handleRequest(EmptyStr), ServerExeption);
 }
 
-//Test Thread create Thread
-TEST(createThread, TestCreate_Thread){
-    Thread thread;
-    EXPECT_NO_THROW(thread.createThread(););
-}
-
-//Test Thread close Thread
-TEST(closeThread, TestClose_Thread){
-    Thread thread;
-    EXPECT_NO_THROW(thread.closeThread(););
-}
 
 //Test Constructor
 TEST(Contructor, Good_addr){
