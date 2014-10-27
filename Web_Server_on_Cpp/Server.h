@@ -9,7 +9,6 @@
 #include "ServerExeption.h"
 #include "DownloadFile.h"
 #include "ViewContentDir.h"
-#include "Thread.h"
 
 class Server
 {
@@ -31,7 +30,6 @@ private:
 
 private:
 
-    Thread                              m_Threads;
     std::auto_ptr<iRequestHandler>      m_RequestOperations;
     struct sockaddr_in                  m_SocketAddress;
     const struct in_addr                m_LocalAddress;

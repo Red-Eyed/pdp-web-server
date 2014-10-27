@@ -49,16 +49,12 @@ SOURCES       = main.cpp \
 		DownloadFile.cpp \
 		Server.cpp \
 		ServerExeption.cpp \
-		Thread.cpp \
-		ViewContentDir.cpp \
-		iRequestHandler.cpp 
+		ViewContentDir.cpp 
 OBJECTS       = main.o \
 		DownloadFile.o \
 		Server.o \
 		ServerExeption.o \
-		Thread.o \
-		ViewContentDir.o \
-		iRequestHandler.o
+		ViewContentDir.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/shell-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -297,8 +293,7 @@ main.o: main.cpp Server.h \
 		ServerExeption.h \
 		DownloadFile.h \
 		iRequestHandler.h \
-		ViewContentDir.h \
-		Thread.h
+		ViewContentDir.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
 DownloadFile.o: DownloadFile.cpp DownloadFile.h \
@@ -310,25 +305,16 @@ Server.o: Server.cpp Server.h \
 		ServerExeption.h \
 		DownloadFile.h \
 		iRequestHandler.h \
-		ViewContentDir.h \
-		Thread.h
+		ViewContentDir.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Server.o Server.cpp
 
 ServerExeption.o: ServerExeption.cpp ServerExeption.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ServerExeption.o ServerExeption.cpp
 
-Thread.o: Thread.cpp Thread.h \
-		ServerExeption.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Thread.o Thread.cpp
-
 ViewContentDir.o: ViewContentDir.cpp ViewContentDir.h \
 		iRequestHandler.h \
 		ServerExeption.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ViewContentDir.o ViewContentDir.cpp
-
-iRequestHandler.o: iRequestHandler.cpp iRequestHandler.h \
-		ServerExeption.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o iRequestHandler.o iRequestHandler.cpp
 
 ####### Install
 

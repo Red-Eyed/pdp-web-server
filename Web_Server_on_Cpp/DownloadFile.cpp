@@ -21,10 +21,7 @@ autoPtrStr DownloadFile::handleRequest(const std::string& input_str) const
     struct stat st;
     stat(input_str.c_str(), &st);
     std::auto_ptr<char> buf(new char[st.st_size]);
-    size_t size = read(fdFile, buf.get(), st.st_size);
-    if( size < 0){
-        throw ServerExeption(-1, "download error");
-    }
+    read(fdFile, buf.get(), st.st_size);
 
     close(fdFile);
     return autoPtrStr(new std::string(buf.get(), st.st_size));
