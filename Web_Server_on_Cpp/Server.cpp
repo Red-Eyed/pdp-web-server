@@ -223,7 +223,7 @@ void Server::writeDirTreeToDescriptor(const std::string& path){
     autoPtrStr getHTMLPage = m_RequestOperations->handleRequest(path);
     if(htmlPage.empty()){
         if(htmlPage.find(path) != std::string::npos){
-            for(int i = 0; i < getHTMLPage->length(); ++i){
+            for(unsigned int i = 0; i < getHTMLPage->length(); ++i){
                 if(getHTMLPage->begin()[i] == '\n'){
                     getHTMLPage->insert(getHTMLPage->begin() + i + 1, '\t');
                 }
@@ -269,6 +269,7 @@ void Server::getDescriptor(){
 }
 
 void cleanUpChildProcess(int state){
+   state = 0;
    int status;
    wait(&status);
    sigFlag = 1;

@@ -15,8 +15,8 @@ public:
     virtual const char* what() const throw();
 
 private:
-    int             m_Rval;
-    std::string     m_Message;
+    const int             m_Rval;
+    const std::string     m_Message;
 };
 
 #endif // SERVER_EXEPTION_H
