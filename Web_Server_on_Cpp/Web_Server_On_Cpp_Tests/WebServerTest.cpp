@@ -6,8 +6,6 @@
 
 #include "gtest/gtest.h"
 
-
-
 //Test VarDownloadFile handle_request()
 TEST(DownloadFileHandleRequest, UnExistPath){
     DownloadFile VarDownloadFile;
@@ -22,7 +20,8 @@ TEST(DownloadFileHandleRequest, File){
     iRequestHandler* PtrDownloadFile = &VarDownloadFile;
 
     std::string FilePath = "/home/vadimstupakov/test_file";
-    open(FilePath.c_str(), O_CREAT);
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    open(FilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 
     EXPECT_NO_THROW(PtrDownloadFile->handleRequest(FilePath));
 
@@ -47,9 +46,10 @@ TEST(DownloadFileHandleRequest, SymLink){
     iRequestHandler* PtrDownloadFile = &VarDownloadFile;
 
     std::string FilePath = "/home/vadimstupakov/test_file";
-    open(FilePath.c_str(), O_CREAT);
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    open(FilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 
-    std::string  LinkPath = "/home/vadimstupakov/test_file";
+    std::string  LinkPath = "/home/vadimstupakov/test_file_link";
     symlink(FilePath.c_str(), LinkPath.c_str());
 
     EXPECT_NO_THROW(PtrDownloadFile->handleRequest(LinkPath));
@@ -87,7 +87,8 @@ TEST(ViewContentDirHandleRequest, File){
     iRequestHandler* PtrViewContentDir = &ViewContentDir;
 
     std::string FilePath = "/home/vadimstupakov/test_file";
-    open(FilePath.c_str(), O_CREAT);
+    mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    open(FilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, mode);
 
     EXPECT_THROW(PtrViewContentDir->handleRequest(FilePath), ServerExeption);
 

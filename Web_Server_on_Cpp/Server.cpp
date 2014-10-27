@@ -62,6 +62,11 @@ Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPag
     }
 }
 
+Server::~Server(){
+    if(m_Connected)
+        closeConnection();
+}
+
 void Server::openConection(){
     if(m_Connected){
         throw ServerExeption();
@@ -112,7 +117,6 @@ void Server::closeConnection(){
         throw ServerExeption(0, "closeConnection error");
     }
     else{
-        std::cerr << "CloseConnection\n";
         m_Connected = 0;
         close(m_FileDescriptor);
         close(m_Socket);
@@ -138,6 +142,8 @@ void Server::handleConnection(){
 
         sscanf(buffer, "%s %s %s", method, path, protocol);
 
+        std::cerr << "buffer = " << buffer << std::endl;
+        std::cerr << "path = " << path << std::endl;
 
         while (strstr(buffer, "\r\n\r\n") == NULL){
             bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer));
@@ -173,9 +179,9 @@ void Server::handleConnection(){
             }
         }
     }
-    else{
-        throw(ServerExeption(bytesRead, "read"));
-    }
+//    else{
+//        throw(ServerExeption(bytesRead, "read"));
+//    }
 }
 
 void Server::fsBrowse(std::string& path){
@@ -273,5 +279,4 @@ void cleanUpChildProcess(int state){
    int status;
    wait(&status);
    sigFlag = 1;
-   std::cerr << "cleanUpChildProcess";
 }
