@@ -18,16 +18,18 @@ void cleanUpChildProcess(int sig);
 static const struct option longOptions[] = {
     { "address",          1, NULL, 'a' },
     { "port",             1, NULL, 'p' },
+    { "start-page",             1, NULL, 's' },
 };
 
 /* Description of short options for getopt_long.  */
 
-static const char* const shortOptions = "a:p:";
+static const char* const shortOptions = "a:p:s";
 
 int main (int argc, char* const argv[]){
     struct in_addr localAddress;
-    uint16_t port;
-    int nextOption;
+    uint16_t port = 0;
+    int nextOption = 0;
+    std::string startPage;
 
     localAddress.s_addr = INADDR_ANY;
     port = 0;
@@ -58,9 +60,17 @@ int main (int argc, char* const argv[]){
                 long value = 0;
                 char* end;
 
-                std::cout << optarg;
+                std::cout << optarg << std::endl;
                 value = strtol (optarg, &end, 10);
                 port = (uint16_t) htons (value);
+            }
+                break;
+
+            case 's':
+            {
+
+                std::cout << optarg << std::endl;
+                startPage = std::string(optarg);
             }
                 break;
 
@@ -72,7 +82,7 @@ int main (int argc, char* const argv[]){
         }
     } while (nextOption != -1);
 
-    Server s(localAddress, port);
+    Server s(localAddress, port, startPage);
     try{
         s.openConection();
     }
