@@ -18,7 +18,7 @@
 
 #include "Server.h"
 
-static sig_atomic_t sigFlag = 0;
+static struct sigaction sigchld_action;
 
 void cleanUpChildProcess(int state);
 
@@ -53,13 +53,6 @@ Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPag
         throw ServerExeption();
     }
 
-    struct hostent* LocalHostName = gethostbyname ("localhost");
-    struct in_addr LocalAddr;
-    LocalAddr.s_addr = *((int*) (LocalHostName->h_addr_list[0]));
-
-    if(addr.s_addr != LocalAddr.s_addr){
-        throw ServerExeption();
-    }
 }
 
 Server::~Server(){
@@ -76,18 +69,20 @@ void Server::openConection(){
         m_Connected = 1;
     }
 
-    struct sigaction sigchld_action;
+
     memset(&sigchld_action, 0, sizeof(sigchld_action));
     sigchld_action.sa_handler = &cleanUpChildProcess;
-    sigaction(SIGTERM, &sigchld_action, NULL);
+    sigaction(SIGCHLD, &sigchld_action, NULL);
 
     bindToSocket();
+
     while (1){
-        if(sigFlag)
-            break;
+
         getDescriptor();
+
         pid_t child_pid = fork();
         if (child_pid == 0){
+            //child process
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
             close(m_Socket);
@@ -103,7 +98,10 @@ void Server::openConection(){
             exit(0);
         }
         else if (child_pid > 0){
-            waitpid(child_pid, NULL, 0);
+            //parent process
+            //wait();
+            //waitpid(child_pid, NULL, WNOHANG);
+            //wait4(child_pid, NULL, WNOHANG, NULL);
             close(m_FileDescriptor);
         }
         else{
@@ -142,8 +140,6 @@ void Server::handleConnection(){
 
         sscanf(buffer, "%s %s %s", method, path, protocol);
 
-        std::cerr << "buffer = " << buffer << std::endl;
-        std::cerr << "path = " << path << std::endl;
 
         while (strstr(buffer, "\r\n\r\n") == NULL){
             bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer));
@@ -186,12 +182,10 @@ void Server::fsBrowse(std::string& path){
     //replace %20 to space
     std::size_t found = 0;
     while((found = path.find("%20", found) ) != std::string::npos){
-        std::cerr << "found = " << found << std::endl;
         path.erase(found, 2);
-        path[found] = ' ' ;
+        path[found] = ' ';
     }
 
-    std::cerr << "path fsBrowse = " << path << std::endl;
     if(path == "/start"){
         path = m_DefaultPage;
     }
@@ -200,7 +194,7 @@ void Server::fsBrowse(std::string& path){
         if(stat(path.c_str(), &s) == 0){
             if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
                 m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
-                writeDirTreeToDescriptor(path);
+                writeToDescriptor(path);
             }
             else if(S_ISREG(s.st_mode)){//download file
                 m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
@@ -224,26 +218,6 @@ void Server::writeToDescriptor(const std::string& path){
         std::cerr << e.what();
         return;
     }
-}
-
-void Server::writeDirTreeToDescriptor(const std::string& path){
-
-    struct stat st;
-    fstat(m_FileDescriptor, &st);
-    char buffer[st.st_size];
-    read(m_FileDescriptor, buffer, st.st_size);
-    std::string htmlPage(buffer, st.st_size);
-    autoPtrStr getHTMLPage = m_RequestOperations->handleRequest(path);
-    if(htmlPage.empty()){
-        if(htmlPage.find(path) != std::string::npos){
-            for(unsigned int i = 0; i < getHTMLPage->length(); ++i){
-                if(getHTMLPage->begin()[i] == '\n'){
-                    getHTMLPage->insert(getHTMLPage->begin() + i + 1, '\t');
-                }
-            }
-        }
-    }
-    write(m_FileDescriptor, getHTMLPage->c_str(), getHTMLPage->length());
 }
 
 void Server::bindToSocket(){
@@ -285,5 +259,4 @@ void cleanUpChildProcess(int state){
     state = 0;
     int status;
     wait(&status);
-    sigFlag = 1;
 }

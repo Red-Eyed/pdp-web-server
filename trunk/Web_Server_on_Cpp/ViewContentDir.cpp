@@ -11,7 +11,7 @@ static const std::string pageStart =
         "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\"\n\"http://www.w3.org/TR/html4/strict.dtd\">\n"
         "<html>\n"
         "\t<head>\n"
-        "\t<title>!DOCTYPE</title>\n"
+        "\t<title>Q-Team Web Server</title>\n"
         "\t<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n"
         "\t</head>\n"
         "\t<body>\n"
@@ -45,7 +45,6 @@ autoPtrStr ViewContentDir::handleRequest(const std::string& inputStr) const{
     else{
         throw ServerExeption(-1, "Open dir error");
     }
-
 }
 
 const autoPtrStr viewFolders(const std::string& path, const std::string& tabs){

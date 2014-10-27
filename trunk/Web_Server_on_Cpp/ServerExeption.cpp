@@ -12,7 +12,6 @@ ServerExeption::~ServerExeption() throw(){
 
 }
 
-
 const char* ServerExeption::what() const throw(){
     std::ostringstream ss;
     ss << m_Rval;
