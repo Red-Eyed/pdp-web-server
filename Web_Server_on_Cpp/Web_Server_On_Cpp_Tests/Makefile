@@ -61,8 +61,6 @@ Server.o : $(USER_DIR)/Server.cpp $(USER_DIR)/Server.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/Server.cpp
 
 
-Thread.o : $(USER_DIR)/Server.cpp $(USER_DIR)/Thread.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/Thread.cpp
 
 ViewContentDir.o : $(USER_DIR)/ViewContentDir.cpp $(USER_DIR)/ViewContentDir.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR)/ViewContentDir.cpp
@@ -73,5 +71,5 @@ ServerExeption.o : $(USER_DIR)/ServerExeption.cpp $(USER_DIR)/ServerExeption.h $
 WebServerTest.o : $(USER_DIR_TEST)/WebServerTest.cpp $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_DIR_TEST)/WebServerTest.cpp
 
-$(TESTS) : DownloadFile.o Server.o Thread.o ViewContentDir.o ServerExeption.o WebServerTest.o gtest_main.a
+$(TESTS) : DownloadFile.o Server.o ViewContentDir.o ServerExeption.o WebServerTest.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
