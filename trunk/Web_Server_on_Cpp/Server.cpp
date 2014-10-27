@@ -179,12 +179,19 @@ void Server::handleConnection(){
             }
         }
     }
-//    else{
-//        throw(ServerExeption(bytesRead, "read"));
-//    }
 }
 
 void Server::fsBrowse(std::string& path){
+
+    //replace %20 to space
+    std::size_t found = 0;
+    while((found = path.find("%20", found) ) != std::string::npos){
+        std::cerr << "found = " << found << std::endl;
+        path.erase(found, 2);
+        path[found] = ' ' ;
+    }
+
+    std::cerr << "path fsBrowse = " << path << std::endl;
     if(path == "/start"){
         path = m_DefaultPage;
     }
@@ -275,8 +282,8 @@ void Server::getDescriptor(){
 }
 
 void cleanUpChildProcess(int state){
-   state = 0;
-   int status;
-   wait(&status);
-   sigFlag = 1;
+    state = 0;
+    int status;
+    wait(&status);
+    sigFlag = 1;
 }
