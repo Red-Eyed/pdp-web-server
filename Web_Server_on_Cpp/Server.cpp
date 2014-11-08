@@ -186,6 +186,10 @@ void Server::fsBrowse(std::string& path){
             }
         }
     }
+    else{
+        FileDescriptor fd(m_FileDescriptor);
+        write(fd.getFd(), pathNotFound.c_str(), pathNotFound.size());
+    }
 
 }
 
