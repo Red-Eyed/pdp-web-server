@@ -16,17 +16,19 @@ public:
 
     Server(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
     ~Server();
+
+    void openConectionInThread();
     void openConection();
     void closeConnection();
 
 private:
 
+    static void* doOpenConnection(Server* ptrSrv);
     void bindToSocket();
     void getDescriptor();
-    void handleConnection();
+    static void* handleConnection(Server* srv);
     void fsBrowse(std::string& path);
-    void writeToDescriptor(const std::string& path);
-    void writeDirTreeToDescriptor(const std::string& path);
+    void writeToDescriptor(const std::string& path) const;
 
 private:
 
@@ -38,7 +40,7 @@ private:
     bool                                m_Connected;
     int                                 m_FileDescriptor;
     const std::string                   m_DefaultPage;
+    bool                                m_LoopFlag;
 };
-
 
 #endif // SERVER_H

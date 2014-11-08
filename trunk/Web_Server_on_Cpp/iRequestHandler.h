@@ -5,13 +5,10 @@
 #include <memory>
 #include "ServerExeption.h"
 
-
-typedef std::auto_ptr<std::string> autoPtrStr;
-
 class iRequestHandler
 {
 public:
-    virtual autoPtrStr handleRequest(const std::string& input_str) const = 0;
+    virtual void handleRequest(const std::string& input_str, std::vector<char>& out) const = 0;
     virtual ~iRequestHandler() throw() {}
 
 };

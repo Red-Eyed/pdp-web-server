@@ -9,7 +9,7 @@ class ViewContentDir : public iRequestHandler
 {
 public:
 
-    virtual autoPtrStr handleRequest(const std::string& input_str) const;
+    virtual void handleRequest(const std::string& input_str, std::vector<char>& out) const;
 };
 
 

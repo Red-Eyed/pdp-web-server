@@ -1,28 +1,29 @@
 #include "DownloadFile.h"
+#include "FileDescriptor.h"
 #include <fcntl.h>
+#include <stdio.h>
 
-autoPtrStr DownloadFile::handleRequest(const std::string& input_str) const
+void DownloadFile::handleRequest(const std::string& inputStr, std::vector<char>& out) const
 {
-    struct stat sb;
-    if( access( input_str.c_str(), F_OK ) == -1 ) {
-        throw ServerExeption();
+    struct stat fsStat;
+    int ret = access( inputStr.c_str(), F_OK );
+    if( ret == -1 ) {
+        throw ServerExeption(ret, "file not exist ", __FUNCTION__, __LINE__ );
     }
 
-    stat(input_str.c_str(), &sb);
-    switch (sb.st_mode & S_IFMT) {
-        case S_IFDIR:  throw ServerExeption();break;
+    stat(inputStr.c_str(), &fsStat);
+    if ((fsStat.st_mode & S_IFMT) == S_IFDIR) {
+        throw ServerExeption(0, "it is a directory not a file ", __FUNCTION__, __LINE__ );
     }
 
-    int fdFile = open(input_str.c_str(), O_RDONLY);
-    if(fdFile < 0){
-        throw ServerExeption(fdFile, "file descriptor error");
+    FileDescriptor fdFile(inputStr, O_RDONLY);
+
+    stat(inputStr.c_str(), &fsStat);
+    out.reserve(fsStat.st_size);
+    size_t readRet = 0;
+    readRet = read(fdFile.getFd(), &out[0], fsStat.st_size);
+
+    if(readRet == static_cast<size_t>(-1) || readRet != static_cast<size_t>(fsStat.st_size)){
+        throw ServerExeption(readRet, "read error ", __FUNCTION__, __LINE__ );
     }
-
-    struct stat st;
-    stat(input_str.c_str(), &st);
-    std::auto_ptr<char> buf(new char[st.st_size]);
-    read(fdFile, buf.get(), st.st_size);
-
-    close(fdFile);
-    return autoPtrStr(new std::string(buf.get(), st.st_size));
 }
