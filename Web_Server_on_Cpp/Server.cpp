@@ -17,42 +17,28 @@
 #include <cstring>
 
 #include "Server.h"
+#include "ServerStrs.h"
+#include "Thread.h"
+#include "Mutex.h"
+#include "FileDescriptor.h"
 
-static struct sigaction sigchld_action;
-
-void cleanUpChildProcess(int state);
-
-static const char* badRequestResponse = "HTTP/1.0 400 Bad Request\n"
-        "Content-type: text/html\n"
-        "\n"
-        "<html>\n"
-        " <body>\n"
-        "  <h1>Bad Request</h1>\n"
-        "  <p>This server did not understand your request.</p>\n"
-        " </body>\n"
-        "</html>\n";
-
-static const char* badMethodResponseTemplate =
-        "HTTP/1.0 501 Method Not Implemented\n"
-        "Content-type: text/html\n"
-        "\n"
-        "<html>\n"
-        " <body>\n"
-        "  <h1>Method Not Implemented</h1>\n"
-        "  <p>The method %s is not implemented by this server.</p>\n"
-        " </body>\n"
-        "</html>\n";
+#define __PORT_RESERVED__ 1024
+#define __QUEUE_OF_CONNECTIONS__ 10
 
 
-Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPage):m_LocalAddress(addr),
+Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPage):
+    m_RequestOperations(NULL),
+    m_LocalAddress(addr),
+    m_Socket(0),
     m_Port(port),
-    m_Connected(0),
-    m_DefaultPage(defaultPage)
+    m_Connected(false),
+    m_FileDescriptor(0),
+    m_DefaultPage(defaultPage),
+    m_LoopFlag(false)
 {
-    if(port <= 1024){
-        throw ServerExeption(0, "Bad port");
+    if(port < htons(__PORT_RESERVED__)){
+        throw ServerExeption(0, "Bad port", __FUNCTION__, __LINE__ );
     }
-
 }
 
 Server::~Server(){
@@ -60,121 +46,116 @@ Server::~Server(){
         closeConnection();
 }
 
+void Server::openConectionInThread(){
+    Thread<void*(*)(Server*), Server*> thread;
+    thread.createTrhead(doOpenConnection, this);
+}
+
 void Server::openConection(){
-    if(m_Connected){
-        throw ServerExeption();
-        return;
-    }
-    else{
-        m_Connected = 1;
-    }
-
-
-    memset(&sigchld_action, 0, sizeof(sigchld_action));
-    sigchld_action.sa_handler = &cleanUpChildProcess;
-    sigaction(SIGCHLD, &sigchld_action, NULL);
-
-    bindToSocket();
-
-    while (1){
-
-        getDescriptor();
-
-        pid_t child_pid = fork();
-        if (child_pid == 0){
-            //child process
-            close(STDIN_FILENO);
-            close(STDOUT_FILENO);
-            close(m_Socket);
-
-            try{
-                handleConnection();
-            }
-            catch(std::exception& e){
-                std::cerr << e.what();
-            }
-
-            close(m_FileDescriptor);
-            exit(0);
-        }
-        else if (child_pid > 0){
-            //parent process
-            //wait();
-            //waitpid(child_pid, NULL, WNOHANG);
-            //wait4(child_pid, NULL, WNOHANG, NULL);
-            close(m_FileDescriptor);
-        }
-        else{
-            throw(ServerExeption(child_pid, "fork"));
-        }
-    }
+    doOpenConnection(this);
 }
 
 void Server::closeConnection(){
-    if(!m_Connected){
-        throw ServerExeption(0, "closeConnection error");
-    }
-    else{
-        m_Connected = 0;
-        close(m_FileDescriptor);
-        close(m_Socket);
+    if(m_Connected){
+        m_LoopFlag = true;
     }
 }
 
-void Server::handleConnection(){
-    char buffer[256];
-    ssize_t bytesRead;
-    memset(buffer, 0, 256);
+void* Server::doOpenConnection(Server* ptrSrv){
+    if(ptrSrv->m_Connected){
+        throw ServerExeption(0, "connections has already existed ", __FUNCTION__, __LINE__ );
+    }
+    else{
+        ptrSrv->m_Connected = true;
+    }
 
+    ptrSrv->bindToSocket();
+
+    while (1){
+        //if server get string "/kill_server" - break loop and Destroy object Server
+        if(ptrSrv->m_LoopFlag){
+            break;
+        }
+        //wait for the new connection
+        ptrSrv->getDescriptor();
+        Thread<void*(*)(Server*), Server*> thread;
+        try {
+            thread.createTrhead(handleConnection, ptrSrv);
+        } catch (const std::exception& e) {
+            std::cerr << e.what();
+        }
+    }
+    close(ptrSrv->m_FileDescriptor);
+    close(ptrSrv->m_Socket);
+    return NULL;
+}
+
+void* Server::handleConnection(Server* srv){
+    std::vector<char> buffer;
+    size_t sizeReserve = 256;
+    buffer.reserve(sizeReserve);
+    ssize_t bytesRead = 0;
+    FileDescriptor fd(srv->m_FileDescriptor);
     //get data from client
-    bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer) - 1);
+    bytesRead = read(fd.getFd(), &buffer[0], buffer.capacity());
     if (bytesRead > 0){
-        char method[sizeof(buffer)];
-        char path[sizeof(buffer)];
-        char protocol[sizeof(buffer)];
+        std::vector<char> method;
+        std::vector<char> path;
+        std::vector<char> protocol;
 
-        memset(method, 0, sizeof(buffer));
-        memset(path, 0, sizeof(buffer));
-        memset(protocol, 0, sizeof(buffer));
-        buffer[bytesRead] = '\0';
+        method.reserve(sizeReserve);
 
-        sscanf(buffer, "%s %s %s", method, path, protocol);
+        path.reserve(sizeReserve);
+
+        protocol.reserve(sizeReserve);
+
+        sscanf(&buffer[0], "%s %s %s", &method[0], &path[0], &protocol[0]);
 
 
-        while (strstr(buffer, "\r\n\r\n") == NULL){
-            bytesRead = read(m_FileDescriptor, buffer, sizeof(buffer));
+        while (strstr(&buffer[0], "\r\n\r\n") == NULL){
+            bytesRead = read(fd.getFd(), &buffer[0], buffer.capacity());
         }
 
         if (bytesRead == -1) {
-            close(m_FileDescriptor);
-            return;
+            fd.fdClose();
+            return NULL;
         }
 
-        if (strcmp(protocol, "HTTP/1.0") && strcmp(protocol, "HTTP/1.1")) {
-
-            write(m_FileDescriptor, badRequestResponse,
-                  sizeof(badRequestResponse));
-
+        if (strcmp(&protocol[0], "HTTP/1.0") && strcmp(&protocol[0], "HTTP/1.1")) {
+            size_t writeSize = 0;
+            writeSize = write(fd.getFd(), badRequestResponse.c_str(), badRequestResponse.size() );
+            if(writeSize != badRequestResponse.size()){
+                throw ServerExeption("write error ", __FUNCTION__, __LINE__ );
+            }
         }
-        else if (strcmp(method, "GET")) {
+        else if (strcmp(&method[0], "GET")) {
 
-            char response[1024];
+            std::vector<char> response;
+            sizeReserve = 1024;
+            response.reserve(sizeReserve);
 
-            snprintf(response, sizeof(response), badMethodResponseTemplate,
-                     method);
-            write(m_FileDescriptor, response, strlen(response));
-
+            snprintf(&response[0], response.capacity(), badMethodResponseTemplate.c_str(), &method[0]);
+            size_t writeSize = 0;
+            writeSize = write(fd.getFd(), &response[0], strlen(&response[0]));
+            if(writeSize != badRequestResponse.size()){
+                throw ServerExeption("write error ", __FUNCTION__, __LINE__ );
+            }
         }
         else{
-            try{
-                std::string str(path);
-                fsBrowse(str);
+            std::string strPath(&path[0]);
+            if(strPath == "/kill_server"){
+                srv->closeConnection();
+                return NULL;
             }
-            catch(std::exception& e){
+            try{
+                srv->fsBrowse(strPath);
+            }
+            catch(const std::exception& e){
                 std::cerr << e.what();
             }
         }
     }
+    return NULL;
 }
 
 void Server::fsBrowse(std::string& path){
@@ -189,41 +170,44 @@ void Server::fsBrowse(std::string& path){
     if(path == "/start"){
         path = m_DefaultPage;
     }
-    try{
-        struct stat s;
-        if(stat(path.c_str(), &s) == 0){
-            if(S_ISDIR(s.st_mode) || S_ISBLK(s.st_mode)){//view fs
-                m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
+    struct stat fsStat;
+    if(stat(path.c_str(), &fsStat) == 0){
+        if(S_ISDIR(fsStat.st_mode) || S_ISBLK(fsStat.st_mode)){//view fs
+            m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
+        }
+        else if(S_ISREG(fsStat.st_mode)){//download file
+            m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
+        }
+        if(m_RequestOperations.get()){
+            try{
                 writeToDescriptor(path);
-            }
-            else if(S_ISREG(s.st_mode)){//download file
-                m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
-                writeToDescriptor(path);
+            }catch (const std::exception& e){
+                std::cerr << e.what();
             }
         }
-    }
-    catch(std::exception& e){
-        std::cerr << e.what();
     }
 
 }
 
-void Server::writeToDescriptor(const std::string& path){
-    try{
-        autoPtrStr toWrite = m_RequestOperations->handleRequest(path);
-        const size_t& size = toWrite->size();
-        write(m_FileDescriptor, toWrite->c_str(), size);
-    }
-    catch(std::exception& e){
-        std::cerr << e.what();
-        return;
+void Server::writeToDescriptor(const std::string& path) const{
+    std::vector<char> buf;
+    size_t fileSize = 0;
+
+    m_RequestOperations->handleRequest(path, buf);
+    Mutex mx;
+    mx.lock();
+    FileDescriptor fd(m_FileDescriptor);
+    mx.unlock();
+    fileSize = write(fd.getFd(), &buf[0], buf.capacity());
+    if(fileSize != buf.capacity()){
+        throw ServerExeption(fileSize, "write error ", __FUNCTION__, __LINE__ );
     }
 }
 
 void Server::bindToSocket(){
     m_Socket = socket(PF_INET, SOCK_STREAM, 0);
     if(m_Socket == -1){
-        throw(ServerExeption(m_Socket, "socket"));
+        throw ServerExeption(m_Socket, "socket error ", __FUNCTION__, __LINE__ );
     }
 
     memset(&m_SocketAddress, 0, sizeof(m_SocketAddress));
@@ -234,29 +218,30 @@ void Server::bindToSocket(){
     int rval = 0;
     rval = bind(m_Socket, reinterpret_cast<struct sockaddr*>(&m_SocketAddress), sizeof(m_SocketAddress));
     if(rval){
-        throw(ServerExeption(rval, "bind"));
+        throw ServerExeption(rval, "bind error ", __FUNCTION__, __LINE__ );
     }
 
-    rval = listen(m_Socket, 10);
+    rval = listen(m_Socket, __QUEUE_OF_CONNECTIONS__);
     if (rval)
-        throw(ServerExeption(rval, "listen"));
+        throw ServerExeption(rval, "listen error ", __FUNCTION__, __LINE__ );
 }
 
 void Server::getDescriptor(){
     struct sockaddr_in RemoteAddr;
     socklen_t AddrLen;
 
+    memset(&RemoteAddr, 0, sizeof(RemoteAddr));
+    memset(&AddrLen, 0, sizeof(AddrLen));
+
     AddrLen = sizeof(RemoteAddr);
+    Mutex mx;
+    ScopeMutex scMx(mx);
     m_FileDescriptor = accept(m_Socket, (struct sockaddr*) &RemoteAddr, &AddrLen);
-    if (m_FileDescriptor == -1) {
+    if(m_FileDescriptor <= -1) {
+        //If system call was interrupted by signal continue executing
         if (errno != EINTR){
-            throw(ServerExeption(errno, "accept"));
+            throw ServerExeption(errno, "accept error ", __FUNCTION__, __LINE__ );
         }
     }
 }
 
-void cleanUpChildProcess(int state){
-    state = 0;
-    int status;
-    wait(&status);
-}

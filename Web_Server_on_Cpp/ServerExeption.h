@@ -9,14 +9,15 @@
 class ServerExeption: public std::exception
 {
 public:
-    ServerExeption(int inp_int, const std::string& str);
     ServerExeption();
+    ServerExeption(long long inpInt, const std::string& str, const std::string& fun, unsigned long int line);
+    ServerExeption(const std::string& str, const std::string& fun, unsigned long int line);
     virtual ~ServerExeption() throw();
     virtual const char* what() const throw();
 
 private:
     const int             m_Rval;
-    const std::string     m_Message;
+    std::string           m_Message;
 };
 
 #endif // SERVER_EXEPTION_H

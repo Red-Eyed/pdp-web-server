@@ -9,16 +9,17 @@
 #include <string.h>
 
 #include "Server.h"
+#include <Thread.h>
 
-
-void cleanUpChildProcess(int sig);
+void help();
+void handleSignal(int);
 
 /* Description of long options for getopt_long.  */
 
 static const struct option longOptions[] = {
     { "address",          1, NULL, 'a' },
     { "port",             1, NULL, 'p' },
-    { "start-page",             1, NULL, 's' },
+    { "start-page",       1, NULL, 's' },
 };
 
 /* Description of short options for getopt_long.  */
@@ -35,19 +36,21 @@ int main (int argc, char* const argv[]){
     port = 0;
 
     /* Parse options.  */
+    int ParamCount = 0;
     do {
         nextOption =
                 getopt_long(argc, argv, shortOptions, longOptions, NULL);
         switch (nextOption) {
             case 'a':
             {
+                ++ParamCount;
                 struct hostent* localHostName;
 
                 /* Look up the host name the user specified.  */
                 localHostName = gethostbyname (optarg);
                 if (localHostName == NULL || localHostName->h_length == 0)
                     /* Could not resolve the name.  */
-                    std::cout << "Invalid host name\n";
+                    std::cerr << "Invalid host name\n";
                 else
                     /* Host name is OK, so use it.  */
                     localAddress.s_addr =
@@ -57,10 +60,10 @@ int main (int argc, char* const argv[]){
 
             case 'p':
             {
+                ++ParamCount;
                 long value = 0;
                 char* end;
 
-                std::cout << optarg << std::endl;
                 value = strtol (optarg, &end, 10);
                 port = (uint16_t) htons (value);
             }
@@ -68,30 +71,35 @@ int main (int argc, char* const argv[]){
 
             case 's':
             {
-
-                std::cout << optarg << std::endl;
                 startPage = std::string(optarg);
             }
                 break;
 
             case -1:
+                if(ParamCount < 2)
+                    help();
                 break;
 
             default:
-                abort ();
+                help();
+                return 0;
         }
     } while (nextOption != -1);
 
-    Server s(localAddress, port, startPage);
     try{
-        s.openConection();
+        Server s(localAddress, port, startPage);
+        s.openConectionInThread();
     }
-    catch(std::exception& e){
+    catch(const std::exception& e){
         std::cerr << e.what();
-        s.closeConnection();
     }
-    s.closeConnection();
+
     return 0;
 }
 
-
+void help(){
+    std::cout << "Commands:\n";
+    std::cout << "\t-a or --address - for setting address\n";
+    std::cout << "\t-p or --port - for setting port\n";
+    std::cout << "\t-s or --start-page - for setting path of start html page (not necessarily)\n";
+}

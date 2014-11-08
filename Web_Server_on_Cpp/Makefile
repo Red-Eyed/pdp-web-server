@@ -14,11 +14,11 @@ CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_QML_DEBUG -DQT_DECLARATIVE_DEBUG
 CFLAGS        = -m64 -pipe -g -Wall -W -fPIE $(DEFINES)
-CXXFLAGS      = -m64 -pipe -g -Wall -W -fPIE $(DEFINES)
+CXXFLAGS      = -m64 -pipe -pthread -Werror -g -Wall -W -fPIE $(DEFINES)
 INCPATH       = -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64 -I.
 LINK          = g++
 LFLAGS        = -m64
-LIBS          = $(SUBLIBS)  
+LIBS          = $(SUBLIBS) -pthread 
 AR            = ar cqs
 RANLIB        = 
 QMAKE         = /usr/lib/x86_64-linux-gnu/qt5/bin/qmake
@@ -49,12 +49,16 @@ SOURCES       = main.cpp \
 		DownloadFile.cpp \
 		Server.cpp \
 		ServerExeption.cpp \
-		ViewContentDir.cpp 
+		ViewContentDir.cpp \
+		FileDescriptor.cpp \
+		Mutex.cpp 
 OBJECTS       = main.o \
 		DownloadFile.o \
 		Server.o \
 		ServerExeption.o \
-		ViewContentDir.o
+		ViewContentDir.o \
+		FileDescriptor.o \
+		Mutex.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/shell-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -293,19 +297,24 @@ main.o: main.cpp Server.h \
 		ServerExeption.h \
 		DownloadFile.h \
 		iRequestHandler.h \
-		ViewContentDir.h
+		ViewContentDir.h \
+		Thread.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
 DownloadFile.o: DownloadFile.cpp DownloadFile.h \
 		iRequestHandler.h \
-		ServerExeption.h
+		ServerExeption.h \
+		FileDescriptor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o DownloadFile.o DownloadFile.cpp
 
 Server.o: Server.cpp Server.h \
 		ServerExeption.h \
 		DownloadFile.h \
 		iRequestHandler.h \
-		ViewContentDir.h
+		ViewContentDir.h \
+		ServerStrs.h \
+		Thread.h \
+		Mutex.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Server.o Server.cpp
 
 ServerExeption.o: ServerExeption.cpp ServerExeption.h
@@ -313,8 +322,16 @@ ServerExeption.o: ServerExeption.cpp ServerExeption.h
 
 ViewContentDir.o: ViewContentDir.cpp ViewContentDir.h \
 		iRequestHandler.h \
-		ServerExeption.h
+		ServerExeption.h \
+		ServerStrs.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ViewContentDir.o ViewContentDir.cpp
+
+FileDescriptor.o: FileDescriptor.cpp FileDescriptor.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o FileDescriptor.o FileDescriptor.cpp
+
+Mutex.o: Mutex.cpp Mutex.h \
+		ServerExeption.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Mutex.o Mutex.cpp
 
 ####### Install
 

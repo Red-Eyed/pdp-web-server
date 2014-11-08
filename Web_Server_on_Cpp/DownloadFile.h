@@ -8,7 +8,7 @@
 class DownloadFile : public iRequestHandler
 {
 public:
-    virtual autoPtrStr handleRequest(const std::string& input_str) const;
+    virtual void handleRequest(const std::string& inputStr, std::vector<char>& out) const;
 };
 
 #endif // DOWNLOAD_FILE_H
