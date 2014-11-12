@@ -1,9 +1,12 @@
-#include "ViewContentDir.h"
-#include "ServerStrs.h"
 #include <dirent.h>
 #include <string.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdexcept>
+
+#include "ViewContentDir.h"
+#include "ServerStrs.h"
+#include "Utils.h"
 
 #define __DIR__ 4
 #define __LINK__ 10
@@ -31,7 +34,7 @@ void ViewContentDir::handleRequest(const std::string& inputStr, std::vector<char
         out.insert(out.end(), pageEnd.begin(), pageEnd.end());
     }
     else{
-        throw ServerExeption(-1, "Open dir error ", __FUNCTION__, __LINE__ );
+        throw std::runtime_error(createString(-1, "Open dir error ", __FUNCTION__, __LINE__ ));
     }
 }
 
@@ -46,7 +49,7 @@ void viewFolders(const std::string& path, const std::string& tabs, std::vector<c
     linkPath.assign(sizeOfLinkPath, 0);
 
     if ((dir = opendir(path.c_str())) == NULL) {
-        throw ServerExeption(0, "opendir failed! ", __FUNCTION__, __LINE__ );
+        throw std::runtime_error(createString(0, "opendir failed! ", __FUNCTION__, __LINE__ ));
     }
     else {
         do{
@@ -94,7 +97,7 @@ void viewFiles(const std::string& path, const std::string& tabs, std::vector<cha
     struct dirent* de = NULL;
     std::string filesList;
     if ((dir = opendir(path.c_str())) == NULL) {
-        throw ServerExeption(0, "opendir failed! ", __FUNCTION__, __LINE__ );
+        throw std::runtime_error(createString(0, "opendir failed! ", __FUNCTION__, __LINE__ ));
     }
     else {
         do {

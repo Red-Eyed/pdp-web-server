@@ -5,42 +5,53 @@
 #include <getopt.h>
 #include <netdb.h>
 #include <sys/wait.h>
+#include <list>
+#include <tr1/memory>
+#include <tr1/shared_ptr.h>
 
 #include "ServerExeption.h"
 #include "DownloadFile.h"
 #include "ViewContentDir.h"
+#include "FileDescriptor.h"
+#include "ClientConnection.h"
+
+typedef std::list<std::tr1::shared_ptr<ClientConnection> > listShPtrClient;
 
 class Server
 {
 public:
 
-    Server(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
+
+    static const Server& instance(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
+    static void deleteInstance();
+    static void openConectionInThread();
+    static void openConection();
+    static void closeConnection();
+    static void closeServer(int);
+
+private:
+
+    Server() {}
+    Server(const Server&) {}
     ~Server();
-
-    void openConectionInThread();
-    void openConection();
-    void closeConnection();
-
-private:
-
     static void* doOpenConnection(Server* ptrSrv);
-    void bindToSocket();
-    void getDescriptor();
-    static void* handleConnection(Server* srv);
-    void fsBrowse(std::string& path);
-    void writeToDescriptor(const std::string& path) const;
+    static void bindToSocket();
+    static void getDescriptor(int& fd);
+    static void fsBrowse(std::string& path);
+    static void writeToDescriptor(const std::string& path);
+    static void clearUnusedClients();
 
 private:
 
-    std::auto_ptr<iRequestHandler>      m_RequestOperations;
-    struct sockaddr_in                  m_SocketAddress;
-    const struct in_addr                m_LocalAddress;
-    int                                 m_Socket;
-    const u_int16_t                     m_Port;
-    bool                                m_Connected;
-    int                                 m_FileDescriptor;
-    const std::string                   m_DefaultPage;
-    bool                                m_LoopFlag;
+    static Server*                             m_Self;
+    static struct sockaddr_in                  m_SocketAddress;
+    static struct in_addr                      m_LocalAddress;
+    static int                                 m_Socket;
+    static u_int16_t                           m_Port;
+    static bool                                m_Connected;
+    static std::string                         m_DefaultPage;
+    static bool                                m_LoopFlag;
+    static listShPtrClient                     m_Connections;
 };
 
 #endif // SERVER_H

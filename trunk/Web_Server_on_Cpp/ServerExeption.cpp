@@ -30,3 +30,4 @@ const char* ServerExeption::what() const throw(){
     std::string TmpStr("Error code(" + ss.str() + ") " + m_Message + "\n");
     return TmpStr.c_str();
 }
+

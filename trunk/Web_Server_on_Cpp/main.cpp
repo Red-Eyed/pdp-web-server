@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
+#include <cstdlib>
 
 #include "Server.h"
-#include <Thread.h>
 
 void help();
 void handleSignal(int);
@@ -24,7 +24,7 @@ static const struct option longOptions[] = {
 
 /* Description of short options for getopt_long.  */
 
-static const char* const shortOptions = "a:p:s";
+static const char* const shortOptions = "a:p:s:";
 
 int main (int argc, char* const argv[]){
     struct in_addr localAddress;
@@ -34,6 +34,11 @@ int main (int argc, char* const argv[]){
 
     localAddress.s_addr = INADDR_ANY;
     port = 0;
+
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = &Server::closeServer;
+    sigaction(SIGINT, &sa, NULL);
 
     /* Parse options.  */
     int ParamCount = 0;
@@ -87,14 +92,14 @@ int main (int argc, char* const argv[]){
     } while (nextOption != -1);
 
     try{
-        Server s(localAddress, port, startPage);
-        s.openConectionInThread();
+        const Server& srv = Server::instance(localAddress, port, startPage);
+        srv.openConection();
     }
     catch(const std::exception& e){
         std::cerr << e.what();
     }
-
-    return 0;
+    std::atexit(Server::deleteInstance);
+    return EXIT_SUCCESS;
 }
 
 void help(){

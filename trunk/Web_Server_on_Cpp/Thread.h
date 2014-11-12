@@ -1,8 +1,10 @@
 #ifndef THREAD_H
 #define THREAD_H
 
+#include <stdexcept>
 #include <pthread.h>
-#include "ServerExeption.h"
+
+#include "Utils.h"
 
 template
 <typename funcType, typename funcArg>
@@ -20,7 +22,7 @@ public:
     void createTrhead(funcType foo, funcArg arg){
         int ret =  pthread_create(&m_ThreadID, NULL, reinterpret_cast<void*(*)(void*)>(foo), reinterpret_cast<void*>(arg));
         if(ret){
-            throw ServerExeption(ret, "createThread() error ", __FUNCTION__, __LINE__ );
+            throw std::runtime_error(createString(ret, "createThread() error ", __FUNCTION__, __LINE__ ));
         }
     }
 

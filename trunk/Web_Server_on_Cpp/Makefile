@@ -51,14 +51,16 @@ SOURCES       = main.cpp \
 		ServerExeption.cpp \
 		ViewContentDir.cpp \
 		FileDescriptor.cpp \
-		Mutex.cpp 
+		ClientConnection.cpp \
+		Utils.cpp 
 OBJECTS       = main.o \
 		DownloadFile.o \
 		Server.o \
 		ServerExeption.o \
 		ViewContentDir.o \
 		FileDescriptor.o \
-		Mutex.o
+		ClientConnection.o \
+		Utils.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/shell-unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -298,10 +300,14 @@ main.o: main.cpp Server.h \
 		DownloadFile.h \
 		iRequestHandler.h \
 		ViewContentDir.h \
-		Thread.h
+		FileDescriptor.h \
+		ClientConnection.h \
+		Thread.h \
+		Utils.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
-DownloadFile.o: DownloadFile.cpp DownloadFile.h \
+DownloadFile.o: DownloadFile.cpp Utils.h \
+		DownloadFile.h \
 		iRequestHandler.h \
 		ServerExeption.h \
 		FileDescriptor.h
@@ -312,9 +318,11 @@ Server.o: Server.cpp Server.h \
 		DownloadFile.h \
 		iRequestHandler.h \
 		ViewContentDir.h \
-		ServerStrs.h \
+		FileDescriptor.h \
+		ClientConnection.h \
 		Thread.h \
-		Mutex.h
+		Utils.h \
+		ServerStrs.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Server.o Server.cpp
 
 ServerExeption.o: ServerExeption.cpp ServerExeption.h
@@ -323,15 +331,27 @@ ServerExeption.o: ServerExeption.cpp ServerExeption.h
 ViewContentDir.o: ViewContentDir.cpp ViewContentDir.h \
 		iRequestHandler.h \
 		ServerExeption.h \
-		ServerStrs.h
+		ServerStrs.h \
+		Utils.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ViewContentDir.o ViewContentDir.cpp
 
-FileDescriptor.o: FileDescriptor.cpp FileDescriptor.h
+FileDescriptor.o: FileDescriptor.cpp Utils.h \
+		FileDescriptor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o FileDescriptor.o FileDescriptor.cpp
 
-Mutex.o: Mutex.cpp Mutex.h \
-		ServerExeption.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Mutex.o Mutex.cpp
+ClientConnection.o: ClientConnection.cpp ClientConnection.h \
+		FileDescriptor.h \
+		iRequestHandler.h \
+		ServerExeption.h \
+		Thread.h \
+		Utils.h \
+		DownloadFile.h \
+		ViewContentDir.h \
+		ServerStrs.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ClientConnection.o ClientConnection.cpp
+
+Utils.o: Utils.cpp Utils.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Utils.o Utils.cpp
 
 ####### Install
 
