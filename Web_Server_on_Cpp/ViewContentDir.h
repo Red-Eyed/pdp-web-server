@@ -1,9 +1,10 @@
 #ifndef VIEW_CONTENT_DIR_H
 #define VIEW_CONTENT_DIR_H
 
-#include "iRequestHandler.h"
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include "iRequestHandler.h"
 
 class ViewContentDir : public iRequestHandler
 {

@@ -9,6 +9,7 @@ class FileDescriptor
 {
 public:
 
+    FileDescriptor();
     explicit FileDescriptor(int fd);
     explicit FileDescriptor(const FileDescriptor& fd);
     FileDescriptor(const std::string& path, int flags);

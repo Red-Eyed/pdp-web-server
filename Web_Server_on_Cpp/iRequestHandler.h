@@ -1,9 +1,10 @@
 #ifndef IREQUEST_HANDLER_H
 #define IREQUEST_HANDLER_H
 
+#include "ServerExeption.h"
+
 #include <vector>
 #include <memory>
-#include "ServerExeption.h"
 
 class iRequestHandler
 {

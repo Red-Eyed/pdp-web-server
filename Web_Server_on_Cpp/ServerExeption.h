@@ -5,6 +5,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <string>
 
 class ServerExeption: public std::exception
 {

@@ -12,52 +12,85 @@
 #include <exception>
 #include <memory>
 #include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <cstring>
+#include <string.h>
 
 #include "Server.h"
 #include "ServerStrs.h"
 #include "Thread.h"
-#include "Mutex.h"
-#include "FileDescriptor.h"
+#include "ClientConnection.h"
 
-#define __PORT_RESERVED__ 1024
-#define __QUEUE_OF_CONNECTIONS__ 10
+#define __PORT_RESERVED__           1024
+#define __QUEUE_OF_CONNECTIONS__    10
+
+Server*                             Server::m_Self          = NULL;
+struct sockaddr_in                  Server::m_SocketAddress;
+struct in_addr                      Server::m_LocalAddress;
+int                                 Server::m_Socket = 0;
+u_int16_t                           Server::m_Port = 0;
+bool                                Server::m_Connected     = false;
+std::string                         Server::m_DefaultPage   = "";
+bool                                Server::m_LoopFlag      = false;
+listShPtrClient                     Server::m_Connections;
 
 
-Server::Server(const in_addr addr, u_int16_t port, const std::string& defaultPage):
-    m_RequestOperations(NULL),
-    m_LocalAddress(addr),
-    m_Socket(0),
-    m_Port(port),
-    m_Connected(false),
-    m_FileDescriptor(0),
-    m_DefaultPage(defaultPage),
-    m_LoopFlag(false)
-{
-    if(port < htons(__PORT_RESERVED__)){
-        throw ServerExeption(0, "Bad port", __FUNCTION__, __LINE__ );
-    }
+
+void Server::deleteInstance(){
+    m_Self->~Server();
+    m_Self = NULL;
 }
 
-Server::~Server(){
-    if(m_Connected)
-        closeConnection();
+const Server& Server::instance(const in_addr addr, u_int16_t port, const std::string& defaultPage){
+    if(!m_Self){
+        m_Self = new Server;
+        if(port < htons(__PORT_RESERVED__)){
+            throw ServerExeption(0, "Bad port", __FUNCTION__, __LINE__ );
+        }
+        m_LocalAddress = addr;
+        m_Socket = 0;
+        m_Port = port;
+        m_Connected = false;
+        m_DefaultPage = defaultPage;
+        m_LoopFlag = false;
+    }
+    return *m_Self;
 }
 
 void Server::openConectionInThread(){
     Thread<void*(*)(Server*), Server*> thread;
-    thread.createTrhead(doOpenConnection, this);
+    thread.createTrhead(doOpenConnection, m_Self);
 }
 
 void Server::openConection(){
-    doOpenConnection(this);
+    doOpenConnection(m_Self);
 }
 
 void Server::closeConnection(){
     if(m_Connected){
         m_LoopFlag = true;
+    }
+}
+
+Server::~Server(){
+    closeConnection();
+    close(m_Socket);
+    std::cout << "\nServer closed!\n";
+}
+
+void Server::clearUnusedClients(){
+    listShPtrClient::iterator iter = m_Connections.begin();
+    for(; iter != m_Connections.end() ;){
+        if(iter->get()->isActive() == false){
+            iter = m_Connections.erase(iter);
+        }
+        else {
+            ++iter;
+        }
+    }
+}
+
+void Server::closeServer(int){
+    if(m_Self){
+        m_Self->closeConnection();
     }
 }
 
@@ -71,141 +104,19 @@ void* Server::doOpenConnection(Server* ptrSrv){
 
     ptrSrv->bindToSocket();
 
-    while (1){
-        //if server get string "/kill_server" - break loop and Destroy object Server
-        if(ptrSrv->m_LoopFlag){
-            break;
-        }
+    //if closeConnection was called
+    while (!(ptrSrv->m_LoopFlag)){
+
         //wait for the new connection
-        ptrSrv->getDescriptor();
-        Thread<void*(*)(Server*), Server*> thread;
-        try {
-            thread.createTrhead(handleConnection, ptrSrv);
-        } catch (const std::exception& e) {
-            std::cerr << e.what();
-        }
-    }
-    close(ptrSrv->m_FileDescriptor);
-    close(ptrSrv->m_Socket);
-    return NULL;
-}
+        int fd = 0;
 
-void* Server::handleConnection(Server* srv){
-    std::vector<char> buffer;
-    size_t sizeReserve = 256;
-    buffer.reserve(sizeReserve);
-    ssize_t bytesRead = 0;
-    FileDescriptor fd(srv->m_FileDescriptor);
-    //get data from client
-    bytesRead = read(fd.getFd(), &buffer[0], buffer.capacity());
-    if (bytesRead > 0){
-        std::vector<char> method;
-        std::vector<char> path;
-        std::vector<char> protocol;
+        ptrSrv->getDescriptor(fd);
 
-        method.reserve(sizeReserve);
-
-        path.reserve(sizeReserve);
-
-        protocol.reserve(sizeReserve);
-
-        sscanf(&buffer[0], "%s %s %s", &method[0], &path[0], &protocol[0]);
-
-
-        while (strstr(&buffer[0], "\r\n\r\n") == NULL){
-            bytesRead = read(fd.getFd(), &buffer[0], buffer.capacity());
-        }
-
-        if (bytesRead == -1) {
-            fd.fdClose();
-            return NULL;
-        }
-
-        if (strcmp(&protocol[0], "HTTP/1.0") && strcmp(&protocol[0], "HTTP/1.1")) {
-            size_t writeSize = 0;
-            writeSize = write(fd.getFd(), badRequestResponse.c_str(), badRequestResponse.size() );
-            if(writeSize != badRequestResponse.size()){
-                throw ServerExeption("write error ", __FUNCTION__, __LINE__ );
-            }
-        }
-        else if (strcmp(&method[0], "GET")) {
-
-            std::vector<char> response;
-            sizeReserve = 1024;
-            response.reserve(sizeReserve);
-
-            snprintf(&response[0], response.capacity(), badMethodResponseTemplate.c_str(), &method[0]);
-            size_t writeSize = 0;
-            writeSize = write(fd.getFd(), &response[0], strlen(&response[0]));
-            if(writeSize != badRequestResponse.size()){
-                throw ServerExeption("write error ", __FUNCTION__, __LINE__ );
-            }
-        }
-        else{
-            std::string strPath(&path[0]);
-            if(strPath == "/kill_server"){
-                srv->closeConnection();
-                return NULL;
-            }
-            try{
-                srv->fsBrowse(strPath);
-            }
-            catch(const std::exception& e){
-                std::cerr << e.what();
-            }
-        }
+        ptrSrv->m_Connections.push_back(std::tr1::shared_ptr<ClientConnection>(new ClientConnection(fd, ptrSrv->m_DefaultPage)));
+        ptrSrv->m_Connections.back()->ConnectToDescriptorInThread();
+        ptrSrv->clearUnusedClients();
     }
     return NULL;
-}
-
-void Server::fsBrowse(std::string& path){
-
-    //replace %20 to space
-    std::size_t found = 0;
-    while((found = path.find("%20", found) ) != std::string::npos){
-        path.erase(found, 2);
-        path[found] = ' ';
-    }
-
-    if(path == "/start"){
-        path = m_DefaultPage;
-    }
-    struct stat fsStat;
-    if(stat(path.c_str(), &fsStat) == 0){
-        if(S_ISDIR(fsStat.st_mode) || S_ISBLK(fsStat.st_mode)){//view fs
-            m_RequestOperations = std::auto_ptr<iRequestHandler> (new ViewContentDir);
-        }
-        else if(S_ISREG(fsStat.st_mode)){//download file
-            m_RequestOperations = std::auto_ptr<iRequestHandler> (new DownloadFile);
-        }
-        if(m_RequestOperations.get()){
-            try{
-                writeToDescriptor(path);
-            }catch (const std::exception& e){
-                std::cerr << e.what();
-            }
-        }
-    }
-    else{
-        FileDescriptor fd(m_FileDescriptor);
-        write(fd.getFd(), pathNotFound.c_str(), pathNotFound.size());
-    }
-
-}
-
-void Server::writeToDescriptor(const std::string& path) const{
-    std::vector<char> buf;
-    size_t fileSize = 0;
-
-    m_RequestOperations->handleRequest(path, buf);
-    Mutex mx;
-    mx.lock();
-    FileDescriptor fd(m_FileDescriptor);
-    mx.unlock();
-    fileSize = write(fd.getFd(), &buf[0], buf.capacity());
-    if(fileSize != buf.capacity()){
-        throw ServerExeption(fileSize, "write error ", __FUNCTION__, __LINE__ );
-    }
 }
 
 void Server::bindToSocket(){
@@ -230,7 +141,7 @@ void Server::bindToSocket(){
         throw ServerExeption(rval, "listen error ", __FUNCTION__, __LINE__ );
 }
 
-void Server::getDescriptor(){
+void Server::getDescriptor(int& fd){
     struct sockaddr_in RemoteAddr;
     socklen_t AddrLen;
 
@@ -238,14 +149,8 @@ void Server::getDescriptor(){
     memset(&AddrLen, 0, sizeof(AddrLen));
 
     AddrLen = sizeof(RemoteAddr);
-    Mutex mx;
-    ScopeMutex scMx(mx);
-    m_FileDescriptor = accept(m_Socket, (struct sockaddr*) &RemoteAddr, &AddrLen);
-    if(m_FileDescriptor <= -1) {
-        //If system call was interrupted by signal continue executing
-        if (errno != EINTR){
-            throw ServerExeption(errno, "accept error ", __FUNCTION__, __LINE__ );
-        }
-    }
+
+    fd = accept(m_Socket, (struct sockaddr*) &RemoteAddr, &AddrLen);
+
 }
 

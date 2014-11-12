@@ -1,6 +1,11 @@
+#include <stdexcept>
 
+#include "Utils.h"
 #include "FileDescriptor.h"
-#include "ServerExeption.h"
+
+FileDescriptor::FileDescriptor():
+    m_IsOpen(false),
+    m_Fd(0){}
 
 FileDescriptor::FileDescriptor(int fd):
     m_IsOpen(true),
@@ -70,7 +75,7 @@ void FileDescriptor::fdOpen(const std::string& path, int flags){
     if(!isOpen()){
         m_Fd = open(path.c_str(), flags);
         if(m_Fd <= 0){
-            throw ServerExeption(m_Fd, "bad descriptor, open() error", __FUNCTION__, __LINE__ );
+            throw std::runtime_error(createString(m_Fd, "bad descriptor, open() error", __FUNCTION__, __LINE__) );
         }
         m_IsOpen = true;
     }

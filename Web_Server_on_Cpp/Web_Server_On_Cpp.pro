@@ -13,7 +13,8 @@ SOURCES += \
     ServerExeption.cpp \
     ViewContentDir.cpp \
     FileDescriptor.cpp \
-    Mutex.cpp
+    ClientConnection.cpp \
+    Utils.cpp
 
 HEADERS += \
     DownloadFile.h \
@@ -23,6 +24,7 @@ HEADERS += \
     ViewContentDir.h \
     FileDescriptor.h \
     ServerStrs.h \
-    Mutex.h \
-    Thread.h
+    Thread.h \
+    ClientConnection.h \
+    Utils.h
 
