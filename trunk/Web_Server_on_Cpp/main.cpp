@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <signal.h>
 #include <string.h>
-#include <cstdlib>
 
 #include "Server.h"
 
@@ -25,6 +24,7 @@ static const struct option longOptions[] = {
 /* Description of short options for getopt_long.  */
 
 static const char* const shortOptions = "a:p:s:";
+
 
 int main (int argc, char* const argv[]){
     struct in_addr localAddress;
@@ -92,13 +92,12 @@ int main (int argc, char* const argv[]){
     } while (nextOption != -1);
 
     try{
-        const Server& srv = Server::instance(localAddress, port, startPage);
+        Server& srv = Server::instance(localAddress, port, startPage);
         srv.openConection();
     }
     catch(const std::exception& e){
         std::cerr << e.what();
     }
-    std::atexit(Server::deleteInstance);
     return EXIT_SUCCESS;
 }
 

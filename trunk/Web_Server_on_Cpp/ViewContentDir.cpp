@@ -27,7 +27,7 @@ void ViewContentDir::handleRequest(const std::string& inputStr, std::vector<char
         }
 
         size_t size = pageEnd.size() + pageStart.size() + folders.size() + files.size();
-        out.reserve(size);
+        out.resize(size);
         out.insert(out.begin(), pageStart.begin(), pageStart.end());
         out.insert(out.end(), folders.begin(), folders.end());
         out.insert(out.end(), files.begin(), files.end());

@@ -2,10 +2,10 @@
 
 #include "Utils.h"
 #include "FileDescriptor.h"
-
+#include <iostream>
 FileDescriptor::FileDescriptor():
     m_IsOpen(false),
-    m_Fd(0){}
+    m_Fd(0){std::cerr << "FileDescriptor()\n";}
 
 FileDescriptor::FileDescriptor(int fd):
     m_IsOpen(true),

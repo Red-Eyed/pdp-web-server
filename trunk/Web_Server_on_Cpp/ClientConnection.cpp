@@ -149,6 +149,7 @@ void ClientConnection::fsBrowse(){
     else{
         write(m_Fd.getFd(), pathNotFound.c_str(), pathNotFound.size());
     }
+    m_Fd.fdClose();
 
 }
 

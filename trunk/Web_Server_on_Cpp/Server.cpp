@@ -13,6 +13,7 @@
 #include <memory>
 #include <stdio.h>
 #include <string.h>
+#include <cstdlib>
 
 #include "Server.h"
 #include "ServerStrs.h"
@@ -22,42 +23,28 @@
 #define __PORT_RESERVED__           1024
 #define __QUEUE_OF_CONNECTIONS__    10
 
-Server*                             Server::m_Self          = NULL;
-struct sockaddr_in                  Server::m_SocketAddress;
-struct in_addr                      Server::m_LocalAddress;
-int                                 Server::m_Socket = 0;
-u_int16_t                           Server::m_Port = 0;
-bool                                Server::m_Connected     = false;
-std::string                         Server::m_DefaultPage   = "";
-bool                                Server::m_LoopFlag      = false;
-listShPtrClient                     Server::m_Connections;
-
-
+Server* Server::m_Self = NULL;
 
 void Server::deleteInstance(){
     m_Self->~Server();
     m_Self = NULL;
 }
 
-const Server& Server::instance(const in_addr addr, u_int16_t port, const std::string& defaultPage){
+Server& Server::instance(const in_addr addr, u_int16_t port, const std::string& defaultPage){
     if(!m_Self){
+        std::atexit(deleteInstance);
         m_Self = new Server;
         if(port < htons(__PORT_RESERVED__)){
             throw ServerExeption(0, "Bad port", __FUNCTION__, __LINE__ );
         }
-        m_LocalAddress = addr;
-        m_Socket = 0;
-        m_Port = port;
-        m_Connected = false;
-        m_DefaultPage = defaultPage;
-        m_LoopFlag = false;
+        m_Self->m_LocalAddress = addr;
+        m_Self->m_Socket = 0;
+        m_Self->m_Port = port;
+        m_Self->m_Connected = false;
+        m_Self->m_DefaultPage = defaultPage;
+        m_Self->m_LoopFlag = false;
     }
     return *m_Self;
-}
-
-void Server::openConectionInThread(){
-    Thread<void*(*)(Server*), Server*> thread;
-    thread.createTrhead(doOpenConnection, m_Self);
 }
 
 void Server::openConection(){
