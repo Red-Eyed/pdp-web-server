@@ -22,11 +22,10 @@ class Server
 public:
 
 
-    static const Server& instance(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
+    static Server& instance(const struct in_addr addr, u_int16_t port, const std::string& defaultPage = "");
     static void deleteInstance();
-    static void openConectionInThread();
-    static void openConection();
-    static void closeConnection();
+    void openConection();
+    void closeConnection();
     static void closeServer(int);
 
 private:
@@ -34,24 +33,24 @@ private:
     Server() {}
     Server(const Server&) {}
     ~Server();
-    static void* doOpenConnection(Server* ptrSrv);
-    static void bindToSocket();
-    static void getDescriptor(int& fd);
-    static void fsBrowse(std::string& path);
-    static void writeToDescriptor(const std::string& path);
-    static void clearUnusedClients();
+    void* doOpenConnection(Server* ptrSrv);
+    void bindToSocket();
+    void getDescriptor(int& fd);
+    void fsBrowse(std::string& path);
+    void writeToDescriptor(const std::string& path);
+    void clearUnusedClients();
 
 private:
 
-    static Server*                             m_Self;
-    static struct sockaddr_in                  m_SocketAddress;
-    static struct in_addr                      m_LocalAddress;
-    static int                                 m_Socket;
-    static u_int16_t                           m_Port;
-    static bool                                m_Connected;
-    static std::string                         m_DefaultPage;
-    static bool                                m_LoopFlag;
-    static listShPtrClient                     m_Connections;
+    static Server*                      m_Self;
+    struct sockaddr_in                  m_SocketAddress;
+    struct in_addr                      m_LocalAddress;
+    int                                 m_Socket;
+    u_int16_t                           m_Port;
+    bool                                m_Connected;
+    std::string                         m_DefaultPage;
+    bool                                m_LoopFlag;
+    listShPtrClient                     m_Connections;
 };
 
 #endif // SERVER_H
