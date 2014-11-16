@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/sendfile.h>
+#include <signal.h>
 
 #include "ClientConnection.h"
 #include "Utils.h"
@@ -11,6 +13,7 @@
 #include "ServerStrs.h"
 #include "Thread.h"
 
+static void sigPipeHandler(int);
 
 ClientConnection::ClientConnection(int fd, const std::string& startPage):
     m_Path(""),
@@ -158,9 +161,33 @@ void ClientConnection::writeToDescriptor(const std::auto_ptr<iRequestHandler>& p
 
     ptrInterface->handleRequest(m_Path, buf);
 
-    size_t writeSize = write(m_Fd.getFd(), &buf[0], buf.size());
+    size_t writeSize = 0;
+    if(buf[0] == 0){
+        struct stat fsStat;
+        off_t offset = 0;
+
+        //handle sigpipe signal from send file
+        struct sigaction sa;
+        memset(&sa, 0, sizeof(sa));
+        sa.sa_handler = sigPipeHandler;
+        sigaction(SIGPIPE, &sa, NULL);
+
+        stat(m_Path.c_str(), &fsStat);
+        size_t fileSize = fsStat.st_size;
+        writeSize = sendfile(m_Fd.getFd(), static_cast<int>(buf[1]), &offset, fileSize);
+
+        if(writeSize != fileSize){
+            throw std::runtime_error(createString(errno, "sendfile error ", __FUNCTION__, __LINE__ ));
+        }
+        close(buf[1]);
+        return;
+    }
+    writeSize = write(m_Fd.getFd(), &buf[0], buf.size());
     if(writeSize != buf.size()){
         throw std::runtime_error(createString(writeSize, "write error ", __FUNCTION__, __LINE__ ));
     }
 }
 
+void sigPipeHandler(int){
+    std::cout << "SIGPIPE\n";
+}
