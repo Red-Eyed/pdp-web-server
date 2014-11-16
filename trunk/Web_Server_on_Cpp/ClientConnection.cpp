@@ -74,9 +74,7 @@ void* ClientConnection::handleConnection(ClientConnection* objPtr){
 
         objPtr->m_Path = std::string(&path[0]);
 
-        while (strstr(&buffer[0], "\r\n\r\n") == NULL){
-            bytesRead = read(objPtr->m_Fd.getFd(), &buffer[0], buffer.size());
-        }
+        bytesRead = read(objPtr->m_Fd.getFd(), &buffer[0], buffer.size());
 
         if (bytesRead == -1) {
             objPtr->m_Fd.fdClose();
