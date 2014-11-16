@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <cstdlib>
+#include <assert.h>
 
 #include "Server.h"
 #include "ServerStrs.h"
@@ -108,6 +109,7 @@ void* Server::doOpenConnection(Server* ptrSrv){
 
 void Server::bindToSocket(){
     m_Socket = socket(PF_INET, SOCK_STREAM, 0);
+
     if(m_Socket == -1){
         throw ServerExeption(m_Socket, "socket error ", __FUNCTION__, __LINE__ );
     }
@@ -137,7 +139,7 @@ void Server::getDescriptor(int& fd){
 
     AddrLen = sizeof(RemoteAddr);
 
-    fd = accept(m_Socket, (struct sockaddr*) &RemoteAddr, &AddrLen);
+    fd = accept(m_Socket, reinterpret_cast<struct sockaddr*>(&RemoteAddr), &AddrLen);
 
 }
 

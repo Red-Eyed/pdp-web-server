@@ -62,12 +62,13 @@ void viewFolders(const std::string& path, const std::string& tabs, std::vector<c
                 if (de->d_name[0] == '.' && de->d_name[1] == '\0') {
                     continue;
                 }
-                foldersList += tabs +"<a href=\"" +
+                foldersList += tabs +
+                        std::string("<a href=\"") +
                         path +
                         std::string(de->d_name) +
-                        "/\">[Dir] " +
+                        std::string("/\">[Dir] ") +
                         de->d_name +
-                        "</a> \n";
+                        std::string("</a> \n");
             }
             if(de->d_type == __LINK__){
                 size_t size = path.length() + strlen(de->d_name) + 1;
@@ -78,11 +79,12 @@ void viewFolders(const std::string& path, const std::string& tabs, std::vector<c
                 absPath[size] = '\0';
                 int end_symbols = readlink(&absPath[0], &linkPath[0], sizeOfLinkPath);
                 linkPath[end_symbols] = '\0';
-                foldersList += tabs + "<a href=\"" +
+                foldersList += tabs +
+                        std::string("<a href=\"") +
                         std::string(&absPath[0]) +
-                        "/\">[Link] " +
+                        std::string("/\">[Link] ") +
                         std::string(de->d_name) +
-                        "</a> \n";
+                        std::string("</a> \n");
             }
         }while (de);
 

@@ -19,14 +19,18 @@ void DownloadFile::handleRequest(const std::string& inputStr, std::vector<char>&
         throw std::runtime_error(createString(0, "it is a directory not a file ", __FUNCTION__, __LINE__) );
     }
 
-    FileDescriptor fdFile(inputStr, O_RDONLY);
+//    fdFile (inputStr, O_RDONLY);
+    int fd = open(inputStr.c_str(), O_RDONLY);
+    out.resize(2);
+    out[0] = 0;
+    out[1] = static_cast<char>(fd);
 
-    stat(inputStr.c_str(), &fsStat);
-    out.resize(fsStat.st_size);
-    size_t readRet = 0;
-    readRet = read(fdFile.getFd(), &out[0], fsStat.st_size);
+//    stat(inputStr.c_str(), &fsStat);
+//    out.resize(fsStat.st_size);
+//    size_t readRet = 0;
+//    readRet = read(fdFile.getFd(), &out[0], fsStat.st_size);
 
-    if(readRet == static_cast<size_t>(-1) || readRet != static_cast<size_t>(fsStat.st_size)){
-        throw std::runtime_error(createString(readRet, "read error ", __FUNCTION__, __LINE__ ));
-    }
+//    if(readRet == static_cast<size_t>(-1) || readRet != static_cast<size_t>(fsStat.st_size)){
+//        throw std::runtime_error(createString(readRet, "read error ", __FUNCTION__, __LINE__ ));
+//    }
 }
